@@ -26,7 +26,6 @@ def get_speech_segment(segment_path, recognizer):
 
 def analyze_audio_segments(wav_path, segment_length_sec=20):
     recognizer = sr.Recognizer()
-
     segments = []
 
     total_length = AudioSegment.from_wav(wav_path).duration_seconds
