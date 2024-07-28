@@ -114,15 +114,34 @@ def combine_segments(segments, segments_to_keep):
     return combined_segments
 
 
+def split_mp3(mp3_path, segments):
+    for i, (start, end, _) in enumerate(segments, start=1):
+        output_path = f"output_segment_{i}.mp3"
+        command = f'ffmpeg -loglevel error -ss {start} -to {end} -i "{mp3_path}" -c copy "{output_path}"'
+        subprocess.call(command, shell=True)
+        print(f"Exported segment {i} from {seconds_to_min_sec(start)} to {seconds_to_min_sec(end)} to {output_path}")
+
+
 def main():
     mp3_path = "./test/integration/fixtures/2024-07-24_ARD Nachtkonzert (BR-Klassik-Rip)_04-02-01.mp3"
-    wav_path = "temp_audio.wav"
-    convert_mp3_to_wav(mp3_path, wav_path)
+    # wav_path = "temp_audio.wav"
+    # convert_mp3_to_wav(mp3_path, wav_path)
+    #
+    # segments = analyze_audio_segments(wav_path)
+    #
+    # os.remove(wav_path)
+    # print(f"Removed temporary file {wav_path}")
 
-    segments = analyze_audio_segments(wav_path)
-
-    os.remove(wav_path)
-    print(f"Removed temporary file {wav_path}")
+    segments = list()
+    segments.append((80, 880, "das war Johann Sebastian Bachs Orgel Passacaglia in c-Moll Werke Verzeichnis 582 in einer Version mit dem Philadelphia Orchestra unter"))
+    segments.append((880, 1680, "yaara Tal und Andreas Grothusen interpretierten die Suite für 2 Klaviere Opus 6 von Schalke klar hier im ARD Nachtkonzert und es geht"))
+    segments.append((1680, 1760, "+ 400 € tschüss"))
+    segments.append((1740, 1820, "Julie Ute tschüss tschüss"))
+    segments.append((1800, 2600, "Knoxville summer of nineteen fifteen eine Szene für Sopran und Orchester von Samuel Barber mit Kathleen Battle und dem Orchester andre preven wie versprochen Wiener Klassik am Ende der Stunde"))
+    segments.append((2600, 3280, "ok Google"))
+    segments.append((3260, 3360, "das war die Sinfonie in G-Dur von Wolfgang Amadeus Mozart Köchelverzeichnis 124 zum Besten gegeben vom English Chamber Orchestra geleitet von Jeffrey Tate"))
+    segments.append((3360, 3500, "ARD Nachtkonzert es ist 5 Uhr vom Bayerischen Rundfunk hören Sie Nachrichten im Studio Sissi Förster in den USA ist die demokratische Präsidentschaftsbewerber Harris angriffslustig in den Wahlkampf startet vor jubelnden"))
+    segments.append((3580, 3600, ""))
 
     print_music_segments(segments)
 
@@ -131,6 +150,9 @@ def main():
     combined_segments = combine_segments(segments, segments_to_keep)
 
     print_music_segments(combined_segments)
+
+    if input("Do you want to split the MP3 based on these segments? (y/n): ").lower() == 'y':
+        split_mp3(mp3_path, combined_segments)
 
 
 if __name__ == "__main__":
