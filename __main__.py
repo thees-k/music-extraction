@@ -28,7 +28,6 @@ def analyze_audio_segments(wav_path, segment_length_sec=20):
     recognizer = sr.Recognizer()
 
     segments = []
-    music_start = None
 
     total_length = AudioSegment.from_wav(wav_path).duration_seconds
     total_length_display = seconds_to_min_sec(int(total_length))
