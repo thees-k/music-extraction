@@ -85,6 +85,35 @@ def print_music_segments(segments):
         print()
 
 
+def merge_segments(segments, from_no, to_no):
+    return segments[from_no - 1][0], segments[to_no - 1][1], segments[to_no - 1][2]
+
+
+def get_user_input():
+    user_input = input("Enter the segments to keep (e.g., 1,2-3,6): ")
+    return "".join(user_input.split())
+
+
+def parse_user_input(user_input):
+    segments_to_keep = []
+    parts = user_input.split(',')
+    for part in parts:
+        if '-' in part:
+            start, end = map(int, part.split('-'))
+            segments_to_keep.append((start, end))
+        else:
+            segments_to_keep.append((int(part), int(part)))
+    return segments_to_keep
+
+
+def combine_segments(segments, segments_to_keep):
+    combined_segments = []
+    for start, end in segments_to_keep:
+        combined_segment = merge_segments(segments, start, end)
+        combined_segments.append(combined_segment)
+    return combined_segments
+
+
 def main():
     mp3_path = "./test/integration/fixtures/2024-07-24_ARD Nachtkonzert (BR-Klassik-Rip)_04-02-01.mp3"
     wav_path = "temp_audio.wav"
@@ -96,6 +125,12 @@ def main():
     print(f"Removed temporary file {wav_path}")
 
     print_music_segments(segments)
+
+    user_input = get_user_input()
+    segments_to_keep = parse_user_input(user_input)
+    combined_segments = combine_segments(segments, segments_to_keep)
+
+    print_music_segments(combined_segments)
 
 
 if __name__ == "__main__":
