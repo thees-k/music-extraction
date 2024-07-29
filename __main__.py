@@ -7,13 +7,16 @@ import speech_recognition as sr
 # Global variable to track if the process should be interrupted
 interrupt = False
 
+
 def signal_handler(sig, frame):
     global interrupt
     interrupt = True
     print("\nProcess interrupted. Continuing with the found segments...")
 
+
 # Register the signal handler
 signal.signal(signal.SIGINT, signal_handler)
+
 
 def convert_mp3_to_wav(mp3_path, wav_path):
     command = f'ffmpeg -loglevel error -i "{mp3_path}" "{wav_path}"'
@@ -133,7 +136,7 @@ def combine_segments(segments, segments_to_keep):
 
 def split_mp3(mp3_path, segments):
     for i, (start, end, _) in enumerate(segments, start=1):
-        output_path = f"output_segment_{i}.mp3"
+        output_path = f"output_segment_{i:02d}.mp3"  # Format the output filename with leading zeros
         command = f'ffmpeg -loglevel error -ss {start} -to {end} -i "{mp3_path}" -c copy "{output_path}"'
         subprocess.call(command, shell=True)
         print(f"Exported segment {i} from {seconds_to_min_sec(start)} to {seconds_to_min_sec(end)} to {output_path}")
