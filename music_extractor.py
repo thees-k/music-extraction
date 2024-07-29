@@ -1,6 +1,7 @@
 import os
 import subprocess
 import signal
+import sys
 from pydub import AudioSegment
 import speech_recognition as sr
 
@@ -143,7 +144,16 @@ def split_mp3(mp3_path, segments):
 
 
 def main():
-    mp3_path = "./test/integration/fixtures/2024-07-24_ARD Nachtkonzert (BR-Klassik-Rip)_04-02-01.mp3"
+    if len(sys.argv) != 2:
+        print("Usage: python3 music_extractor.py <path_to_mp3>")
+        sys.exit(1)
+
+    mp3_path = sys.argv[1]
+
+    if not os.path.isfile(mp3_path):
+        print(f"File not found: {mp3_path}")
+        sys.exit(1)
+
     wav_path = "temp_audio.wav"
     convert_mp3_to_wav(mp3_path, wav_path)
 
