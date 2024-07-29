@@ -124,24 +124,13 @@ def split_mp3(mp3_path, segments):
 
 def main():
     mp3_path = "./test/integration/fixtures/2024-07-24_ARD Nachtkonzert (BR-Klassik-Rip)_04-02-01.mp3"
-    # wav_path = "temp_audio.wav"
-    # convert_mp3_to_wav(mp3_path, wav_path)
-    #
-    # segments = analyze_audio_segments(wav_path)
-    #
-    # os.remove(wav_path)
-    # print(f"Removed temporary file {wav_path}")
+    wav_path = "temp_audio.wav"
+    convert_mp3_to_wav(mp3_path, wav_path)
 
-    segments = list()
-    segments.append((80, 880, "das war Johann Sebastian Bachs Orgel Passacaglia in c-Moll Werke Verzeichnis 582 in einer Version mit dem Philadelphia Orchestra unter"))
-    segments.append((880, 1680, "yaara Tal und Andreas Grothusen interpretierten die Suite für 2 Klaviere Opus 6 von Schalke klar hier im ARD Nachtkonzert und es geht"))
-    segments.append((1680, 1760, "+ 400 € tschüss"))
-    segments.append((1740, 1820, "Julie Ute tschüss tschüss"))
-    segments.append((1800, 2600, "Knoxville summer of nineteen fifteen eine Szene für Sopran und Orchester von Samuel Barber mit Kathleen Battle und dem Orchester andre preven wie versprochen Wiener Klassik am Ende der Stunde"))
-    segments.append((2600, 3280, "ok Google"))
-    segments.append((3260, 3360, "das war die Sinfonie in G-Dur von Wolfgang Amadeus Mozart Köchelverzeichnis 124 zum Besten gegeben vom English Chamber Orchestra geleitet von Jeffrey Tate"))
-    segments.append((3360, 3500, "ARD Nachtkonzert es ist 5 Uhr vom Bayerischen Rundfunk hören Sie Nachrichten im Studio Sissi Förster in den USA ist die demokratische Präsidentschaftsbewerber Harris angriffslustig in den Wahlkampf startet vor jubelnden"))
-    segments.append((3580, 3600, ""))
+    segments = analyze_audio_segments(wav_path)
+
+    os.remove(wav_path)
+    print(f"Removed temporary file {wav_path}")
 
     print_music_segments(segments)
 
