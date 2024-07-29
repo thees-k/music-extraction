@@ -1,8 +1,19 @@
 import os
 import subprocess
+import signal
 from pydub import AudioSegment
 import speech_recognition as sr
 
+# Global variable to track if the process should be interrupted
+interrupt = False
+
+def signal_handler(sig, frame):
+    global interrupt
+    interrupt = True
+    print("\nProcess interrupted. Continuing with the found segments...")
+
+# Register the signal handler
+signal.signal(signal.SIGINT, signal_handler)
 
 def convert_mp3_to_wav(mp3_path, wav_path):
     command = f'ffmpeg -loglevel error -i "{mp3_path}" "{wav_path}"'
@@ -35,7 +46,11 @@ def analyze_audio_segments(wav_path, segment_length_sec=20):
     is_music_running = False
     music_begin = 0
 
-    while start_time < total_length:
+    global interrupt
+
+    print("\nAnalyzing audio segments... (Press Ctrl+C to interrupt and proceed with found segments)")
+
+    while start_time < total_length and not interrupt:
         end_time = start_time + segment_length_sec
         if end_time > total_length:
             end_time = total_length
@@ -43,22 +58,24 @@ def analyze_audio_segments(wav_path, segment_length_sec=20):
         segment_path = "temp_segment.wav"
         if start_time % 60 == 0:
             print(f"Timestamp {seconds_to_min_sec(start_time)} (of {total_length_display})...")
-        extract_segment(wav_path, start_time, segment_length_sec, segment_path)
 
-        speech_segment = get_speech_segment(segment_path, recognizer)
-        if speech_segment:
-            if is_music_running:
-                segments.append((music_begin, end_time, speech_segment))
-                is_music_running = False
-                print(f"-> Music stop between {seconds_to_min_sec(start_time)} and {seconds_to_min_sec(end_time)} :"
-                      f" \"{speech_segment}\"")
-        else:
-            if not is_music_running:
-                music_begin = max(start_time - segment_length_sec, 0)
-                is_music_running = True
-                print(f"-> Music START between {seconds_to_min_sec(start_time)} and {seconds_to_min_sec(end_time)}")
-
-        os.remove(segment_path)
+        try:
+            extract_segment(wav_path, start_time, segment_length_sec, segment_path)
+            speech_segment = get_speech_segment(segment_path, recognizer)
+            if speech_segment:
+                if is_music_running:
+                    segments.append((music_begin, end_time, speech_segment))
+                    is_music_running = False
+                    print(f"-> Music stop between {seconds_to_min_sec(start_time)} and {seconds_to_min_sec(end_time)} :"
+                          f" \"{speech_segment}\"")
+            else:
+                if not is_music_running:
+                    music_begin = max(start_time - segment_length_sec, 0)
+                    is_music_running = True
+                    print(f"-> Music START between {seconds_to_min_sec(start_time)} and {seconds_to_min_sec(end_time)}")
+        finally:
+            if os.path.exists(segment_path):
+                os.remove(segment_path)
 
         start_time = end_time
 
