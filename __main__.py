@@ -90,7 +90,7 @@ def merge_segments(segments, from_no, to_no):
 
 
 def get_user_input():
-    user_input = input("Enter the segments to keep (e.g., 1,2-3,6): ")
+    user_input = input("Enter the segments to keep (e.g., 1,2-3,6) or press the Enter key to keep all: ")
     return "".join(user_input.split())
 
 
@@ -146,12 +146,15 @@ def main():
     print_music_segments(segments)
 
     user_input = get_user_input()
-    segments_to_keep = parse_user_input(user_input)
-    combined_segments = combine_segments(segments, segments_to_keep)
+    if user_input == "":
+        combined_segments = segments
+    else:
+        segments_to_keep = parse_user_input(user_input)
+        combined_segments = combine_segments(segments, segments_to_keep)
 
     print_music_segments(combined_segments)
 
-    if input("Do you want to split the MP3 based on these segments? (y/n): ").lower() == 'y':
+    if not input("Do you want to split the MP3 based on these segments? (Y/n): ").lower() == 'n':
         split_mp3(mp3_path, combined_segments)
 
 
