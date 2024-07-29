@@ -145,7 +145,7 @@ def split_mp3(mp3_path, segments):
 
 def main():
     if len(sys.argv) != 2:
-        print("Usage: python3 music_extractor.py <path_to_mp3>")
+        print("Usage: python3 __main__.py <path_to_mp3>")
         sys.exit(1)
 
     mp3_path = sys.argv[1]
