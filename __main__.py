@@ -5,18 +5,11 @@ import sys
 from pydub import AudioSegment
 import speech_recognition as sr
 
-# Global variable to track if the process should be interrupted
-interrupt = False
-
 
 def signal_handler(sig, frame):
     global interrupt
     interrupt = True
     print("\nProcess interrupted. Continuing with the found segments...")
-
-
-# Register the signal handler
-signal.signal(signal.SIGINT, signal_handler)
 
 
 def convert_mp3_to_wav(mp3_path, wav_path):
@@ -110,7 +103,7 @@ def merge_segments(segments, from_no, to_no):
     return segments[from_no - 1][0], segments[to_no - 1][1], segments[to_no - 1][2]
 
 
-def get_user_input():
+def get_user_input_segments_to_keep():
     user_input = input("Enter the segments to keep (e.g., 1,2-3,6) or press the Enter key to keep all: ")
     return "".join(user_input.split())
 
@@ -135,12 +128,29 @@ def combine_segments(segments, segments_to_keep):
     return combined_segments
 
 
+def get_user_confirmation():
+    return not input("Proceed with these segments? (Y/n): ").lower() == 'n'
+
+
 def split_mp3(mp3_path, segments):
     for i, (start, end, _) in enumerate(segments, start=1):
         output_path = f"output_segment_{i:02d}.mp3"  # Format the output filename with leading zeros
         command = f'ffmpeg -loglevel error -ss {start} -to {end} -i "{mp3_path}" -c copy "{output_path}"'
         subprocess.call(command, shell=True)
         print(f"Exported segment {i} from {seconds_to_min_sec(start)} to {seconds_to_min_sec(end)} to {output_path}")
+
+
+def get_user_combined_segments(segments):
+    user_input = get_user_input_segments_to_keep()
+    if user_input == "":
+        return segments
+    else:
+        segments_to_keep = parse_user_input(user_input)
+        return combine_segments(segments, segments_to_keep)
+
+
+# Global variable to track if the process should be interrupted
+interrupt = False
 
 
 def main():
@@ -157,21 +167,23 @@ def main():
     wav_path = "temp_audio.wav"
     convert_mp3_to_wav(mp3_path, wav_path)
 
+    # Register the signal handler
+    signal.signal(signal.SIGINT, signal_handler)
+
     segments = analyze_audio_segments(wav_path)
+
+    # Unset signal handler
+    signal.signal(signal.SIGINT, signal.SIG_DFL)
 
     os.remove(wav_path)
     print(f"Removed temporary file {wav_path}")
 
-    print_music_segments(segments)
-
-    user_input = get_user_input()
-    if user_input == "":
-        combined_segments = segments
-    else:
-        segments_to_keep = parse_user_input(user_input)
-        combined_segments = combine_segments(segments, segments_to_keep)
-
-    print_music_segments(combined_segments)
+    while True:
+        print_music_segments(segments)
+        combined_segments = get_user_combined_segments(segments)
+        print_music_segments(combined_segments)
+        if get_user_confirmation():
+            break
 
     if not input("Do you want to split the MP3 based on these segments? (Y/n): ").lower() == 'n':
         split_mp3(mp3_path, combined_segments)
