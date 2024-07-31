@@ -66,11 +66,11 @@ class SpeechFinder:
         return end_time, lines
 
     def _do_analysis(self, start_time=0, old_lines=()):
-        wav_path = Path("temp_audio.wav")
-        self.convert_audio_to_wav(self._audio_path, wav_path)
+        flac_path = Path("temp_audio.flac")
+        self.convert_audio_to_flac(self._audio_path, flac_path)
 
         recognizer = sr.Recognizer()
-        total_length = AudioSegment.from_wav(wav_path).duration_seconds
+        total_length = AudioSegment.from_file(flac_path).duration_seconds
         logging.info("Analyzing audio segments... (Press Ctrl+C to interrupt)")
 
         self._interrupt = False
@@ -83,7 +83,7 @@ class SpeechFinder:
                 file.write(f"{self.SEGMENT_LENGTH_SEC}\n")
                 logging.info(self.SEGMENT_LENGTH_SEC)
 
-            segment_path = Path("temp_segment.wav")
+            segment_path = Path("temp_segment.flac")
 
             while start_time < total_length:
                 end_time = start_time + self.SEGMENT_LENGTH_SEC
@@ -91,7 +91,7 @@ class SpeechFinder:
                     end_time = total_length
 
                 try:
-                    self.extract_segment(wav_path, start_time, self.SEGMENT_LENGTH_SEC, segment_path)
+                    self.extract_segment(flac_path, start_time, self.SEGMENT_LENGTH_SEC, segment_path)
                     speech_segment = self.get_speech_segment(segment_path, recognizer)
                     if speech_segment is None:
                         file.write(f"{start_time}\n")
@@ -112,8 +112,8 @@ class SpeechFinder:
                     logging.info(end_time)
                     break
 
-        os.remove(wav_path)
-        logging.info(f"Removed temporary file {wav_path}")
+        os.remove(flac_path)
+        logging.info(f"Removed temporary file {flac_path}")
         signal.signal(signal.SIGINT, signal.SIG_DFL)
 
     def _delete_analysis_file_if_exists(self):
@@ -158,21 +158,21 @@ class SpeechFinder:
         self._interrupt = True
 
     @staticmethod
-    def convert_audio_to_wav(audio_path: Path, wav_path: Path):
-        command = f'ffmpeg -loglevel error -i "{audio_path}" "{wav_path}"'
+    def convert_audio_to_flac(audio_path: Path, flac_path: Path):
+        command = f'ffmpeg -loglevel error -i "{audio_path}" "{flac_path}"'
         result = subprocess.call(command, shell=True)
         if result != 0:
-            logging.error(f"Failed to convert {audio_path} to {wav_path}")
+            logging.error(f"Failed to convert {audio_path} to {flac_path}")
             raise RuntimeError(f"ffmpeg conversion failed for {audio_path}")
-        logging.info(f"Converted {audio_path} to {wav_path}")
+        logging.info(f"Converted {audio_path} to {flac_path}")
 
     @staticmethod
-    def extract_segment(wav_path: Path, start_time: int, duration: int, segment_path: Path):
-        command = f'ffmpeg -loglevel error -ss {start_time} -t {duration} -i "{wav_path}" "{segment_path}"'
+    def extract_segment(flac_path: Path, start_time: int, duration: int, segment_path: Path):
+        command = f'ffmpeg -loglevel error -ss {start_time} -t {duration} -i "{flac_path}" "{segment_path}"'
         result = subprocess.call(command, shell=True)
         if result != 0:
-            logging.error(f"Failed to extract segment from {wav_path}")
-            raise RuntimeError(f"ffmpeg segment extraction failed for {wav_path}")
+            logging.error(f"Failed to extract segment from {flac_path}")
+            raise RuntimeError(f"ffmpeg segment extraction failed for {flac_path}")
 
     @staticmethod
     def get_speech_segment(segment_path: Path, recognizer: sr.Recognizer):
