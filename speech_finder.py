@@ -8,6 +8,7 @@ import zipfile
 from enum import Enum
 import logging
 from pathlib import Path
+import socket
 
 logging.basicConfig(level=logging.INFO, format='%(asctime)s: %(message)s')
 
@@ -35,6 +36,10 @@ class SpeechFinder:
 
     def build(self):
         analyze_type = self._get_analyze_type()
+
+        if not self.check_internet_connection():
+            logging.error("Program cannot be executed without connection to the internet")
+            exit(1)
 
         if analyze_type == AnalysisType.NOT_NECESSARY:
             pass
@@ -173,6 +178,24 @@ class SpeechFinder:
         if result != 0:
             logging.error(f"Failed to extract segment from {flac_path}")
             raise RuntimeError(f"ffmpeg segment extraction failed for {flac_path}")
+
+    @staticmethod
+    def check_internet_connection(timeout=2):
+        """
+        Check if there is an internet connection by attempting to connect to a well-known host.
+
+        :param timeout: Timeout in seconds for the connection attempt.
+        :return: True if the internet connection is available, False otherwise.
+        """
+        try:
+            # Try to connect to a well-known host (Google DNS server) on port 53 (DNS service)
+            socket.setdefaulttimeout(timeout)
+            host = socket.gethostbyname("8.8.8.8")
+            s = socket.create_connection((host, 53), timeout)
+            s.close()
+            return True
+        except OSError:
+            return False
 
     @staticmethod
     def get_speech_segment(segment_path: Path, recognizer: sr.Recognizer):
