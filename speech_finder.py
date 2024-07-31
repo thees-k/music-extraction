@@ -14,6 +14,9 @@ logging.basicConfig(level=logging.INFO, format='%(asctime)s: %(message)s')
 
 
 class AnalyzeFileStatus(Enum):
+    """
+    Enumeration to represent the status of the analysis file.
+    """
     NOT_EXISTING = 'not_existing'
     EMPTY = 'empty'
     FIRST_LINE_IS_NO_DIGIT = 'first_line_is_no_digit'
@@ -22,20 +25,42 @@ class AnalyzeFileStatus(Enum):
 
 
 class AnalysisType(Enum):
+    """
+    Enumeration to represent the type of analysis to be performed.
+    """
     FULL = 'Full Analysis'
     CONTINUE = 'Continue Analysis'
     NOT_NECESSARY = 'Analysis is not necessary'
 
 
 class SpeechFinder:
+    """
+    Class to handle the analysis of an audio file, performing speech recognition on segments of the audio.
+
+    Attributes:
+        SEGMENT_LENGTH_SEC (int): Length of each audio segment in seconds.
+        _audio_path (Path): Path to the audio file to be analyzed.
+        _analyze_file_path (str): Path to the file where analysis results are stored.
+        _interrupt (bool): Flag to indicate if the process was interrupted.
+    """
+
     SEGMENT_LENGTH_SEC = 20
 
     def __init__(self, audio_path: str):
+        """
+        Initialize the SpeechFinder with the given audio file path.
+
+        Args:
+            audio_path (str): Path to the audio file.
+        """
         self._audio_path = Path(audio_path)
         self._analyze_file_path = self._build_analyze_file_path()
         self._interrupt = False
 
     def build(self):
+        """
+        Determine the type of analysis to perform and execute it.
+        """
         analyze_type = self._get_analyze_type()
 
         if not self.check_internet_connection():
@@ -54,6 +79,12 @@ class SpeechFinder:
             raise NotImplementedError(f"Not implemented for {analyze_type}")
 
     def _prepare_analysis_file(self):
+        """
+        Prepare the analysis file by reading its content and finding the last non-empty digit line.
+
+        Returns:
+            Tuple[int, List[str]]: End time and lines read from the file.
+        """
         end_time = None
         with open(self._analyze_file_path, 'r') as file:
             lines = file.readlines()
@@ -72,6 +103,13 @@ class SpeechFinder:
         return end_time, lines
 
     def _do_analysis(self, start_time=0, old_lines=()):
+        """
+        Perform the speech recognition analysis on the audio file, segment by segment.
+
+        Args:
+            start_time (int, optional): The time to start the analysis from. Defaults to 0.
+            old_lines (tuple, optional): Existing lines from a previous analysis. Defaults to ().
+        """
         flac_path = Path("temp_audio.flac")
         self.convert_audio_to_flac(self._audio_path, flac_path)
 
@@ -127,13 +165,28 @@ class SpeechFinder:
         signal.signal(signal.SIGINT, signal.SIG_DFL)
 
     def _delete_analysis_file_if_exists(self):
+        """
+        Delete the analysis file if it exists.
+        """
         if os.path.isfile(self._analyze_file_path):
             os.remove(self._analyze_file_path)
 
     def _build_analyze_file_path(self) -> str:
+        """
+        Build the path for the analysis file based on the audio file path.
+
+        Returns:
+            str: Path to the analysis file.
+        """
         return str(self._audio_path.with_suffix('.speech'))
 
     def _get_analyze_type(self) -> AnalysisType:
+        """
+        Determine the type of analysis to perform based on the status of the analysis file.
+
+        Returns:
+            AnalysisType: The type of analysis to perform.
+        """
         status = self._check_file()
         if status in (AnalyzeFileStatus.NOT_EXISTING, AnalyzeFileStatus.EMPTY, AnalyzeFileStatus.FIRST_LINE_IS_NO_DIGIT):
             return AnalysisType.FULL
@@ -145,6 +198,12 @@ class SpeechFinder:
             raise NotImplementedError(f"Not implemented for {status}")
 
     def _check_file(self) -> AnalyzeFileStatus:
+        """
+        Check the status of the analysis file.
+
+        Returns:
+            AnalyzeFileStatus: The status of the analysis file.
+        """
         if not os.path.isfile(self._analyze_file_path):
             return AnalyzeFileStatus.NOT_EXISTING
         if os.path.getsize(self._analyze_file_path) == 0:
@@ -165,10 +224,24 @@ class SpeechFinder:
                 return AnalyzeFileStatus.FILE_OK
 
     def _signal_handler(self, sig, frame):
+        """
+        Signal handler for interrupt signals.
+
+        Args:
+            sig (int): The signal number.
+            frame (FrameType): The current stack frame.
+        """
         self._interrupt = True
 
     @staticmethod
     def convert_audio_to_flac(audio_path: Path, flac_path: Path):
+        """
+        Convert the audio file to FLAC format.
+
+        Args:
+            audio_path (Path): Path to the input audio file.
+            flac_path (Path): Path to the output FLAC file.
+        """
         command = f'ffmpeg -loglevel error -i "{audio_path}" "{flac_path}"'
         result = subprocess.call(command, shell=True)
         if result != 0:
@@ -178,6 +251,15 @@ class SpeechFinder:
 
     @staticmethod
     def extract_segment(flac_path: Path, start_time: int, duration: int, segment_path: Path):
+        """
+        Extract a segment from the FLAC audio file.
+
+        Args:
+            flac_path (Path): Path to the input FLAC file.
+            start_time (int): Start time of the segment in seconds.
+            duration (int): Duration of the segment in seconds.
+            segment_path (Path): Path to the output segment file.
+        """
         command = f'ffmpeg -loglevel error -ss {start_time} -t {duration} -i "{flac_path}" "{segment_path}"'
         result = subprocess.call(command, shell=True)
         if result != 0:
@@ -189,8 +271,11 @@ class SpeechFinder:
         """
         Check if there is an internet connection by attempting to connect to a well-known host.
 
-        :param timeout: Timeout in seconds for the connection attempt.
-        :return: True if the internet connection is available, False otherwise.
+        Args:
+            timeout (int, optional): Timeout in seconds for the connection attempt. Defaults to 2.
+
+        Returns:
+            bool: True if the internet connection is available, False otherwise.
         """
         try:
             # Try to connect to a well-known host (Google DNS server) on port 53 (DNS service)
@@ -204,6 +289,16 @@ class SpeechFinder:
 
     @staticmethod
     def get_speech_segment(segment_path: Path, recognizer: sr.Recognizer):
+        """
+        Perform speech recognition on the given audio segment.
+
+        Args:
+            segment_path (Path): Path to the audio segment file.
+            recognizer (sr.Recognizer): The speech recognizer instance.
+
+        Returns:
+            str: The recognized text from the audio segment, or None if a RequestError occurs.
+        """
         with sr.AudioFile(str(segment_path)) as source:
             audio_data = recognizer.record(source)
             try:
@@ -216,18 +311,36 @@ class SpeechFinder:
 
 
 def find_last_non_empty_line(lines) -> str:
+    """
+    Find the last non-empty line in a list of lines.
+
+    Args:
+        lines (List[str]): List of lines to search through.
+
+    Returns:
+        str: The last non-empty line, or None if no such line is found.
+    """
     for line in reversed(lines):
         if line.strip():  # Checks if the string is not empty or whitespace only
             return line.strip()
 
 
 def zip_textfile(file_path: str):
+    """
+    Create a zip file containing the given text file.
+
+    Args:
+        file_path (str): Path to the text file to be zipped.
+    """
     zip_path = file_path + ".zip"
     with zipfile.ZipFile(zip_path, 'w') as zipf:
         zipf.write(file_path, arcname=Path(file_path).name)
 
 
 def main():
+    """
+    Main function to execute the speech analysis process.
+    """
     if len(sys.argv) != 2:
         logging.error("Missing audio file")
         sys.exit(1)
