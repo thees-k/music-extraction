@@ -33,6 +33,7 @@ class SpeechFinder:
     def __init__(self, audio_path: str):
         self._audio_path = Path(audio_path)
         self._analyze_file_path = self._build_analyze_file_path()
+        self._interrupt = False
 
     def build(self):
         analyze_type = self._get_analyze_type()
@@ -78,7 +79,6 @@ class SpeechFinder:
         total_length = AudioSegment.from_file(flac_path).duration_seconds
         logging.info("Analyzing audio segments... (Press Ctrl+C to interrupt)")
 
-        self._interrupt = False
         signal.signal(signal.SIGINT, self._signal_handler)
 
         with open(self._analyze_file_path, "w") as file:
@@ -100,12 +100,16 @@ class SpeechFinder:
                     speech_segment = self.get_speech_segment(segment_path, recognizer)
                     if speech_segment is None:
                         file.write(f"{start_time}\n")
-                        logging.info(start_time)
+                        logging.info(f"Analysis stopped at {start_time} due to a RequestError.")
                         break
                     elif speech_segment:
                         line = f"{start_time} {speech_segment}"
                         file.write(line + "\n")
                         logging.info(line)
+                except sr.RequestError as e:
+                    logging.error(f"RequestError at segment starting at {start_time}: {e}")
+                    file.write(f"{start_time}\n")
+                    break
                 finally:
                     if os.path.exists(segment_path):
                         os.remove(segment_path)
@@ -114,7 +118,7 @@ class SpeechFinder:
 
                 if self._interrupt and end_time < total_length:
                     file.write(f"{end_time}\n")
-                    logging.info(end_time)
+                    logging.info(f"Analysis interrupted at {end_time}.")
                     break
 
         os.remove(flac_path)
