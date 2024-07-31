@@ -35,7 +35,7 @@ class AnalysisType(Enum):
 
 class SpeechFinder:
     """
-    Class to handle the analysis of an audio file, performing speech recognition on segments of the audio.
+    Class to handle the analysis of an audio file, finding and saving speech segments.
 
     Attributes:
         SEGMENT_LENGTH_SEC (int): Length of each audio segment in seconds.
@@ -57,7 +57,7 @@ class SpeechFinder:
         self._analyze_file_path = self._build_analyze_file_path()
         self._interrupt = False
 
-    def build(self):
+    def find_segments(self):
         """
         Determine the type of analysis to perform and execute it.
         """
@@ -350,7 +350,7 @@ def main():
         logging.error(f"File not found: {audio_file_path}")
         sys.exit(1)
 
-    SpeechFinder(audio_file_path).build()
+    SpeechFinder(audio_file_path).find_segments()
 
 
 if __name__ == "__main__":
