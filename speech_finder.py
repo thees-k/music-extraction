@@ -80,6 +80,7 @@ class SpeechFinder:
         logging.info("Analyzing audio segments... (Press Ctrl+C to interrupt)")
 
         signal.signal(signal.SIGINT, self._signal_handler)
+        self._interrupt = False  # Reset interrupt flag before starting analysis
 
         with open(self._analyze_file_path, "w") as file:
             if old_lines:
