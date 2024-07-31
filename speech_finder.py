@@ -25,26 +25,26 @@ class AnalysisType(Enum):
 class SpeechFinder:
 
     def __init__(self, audio_path):
-        self.audio_path = audio_path
-        self.analyze_file_path = self.build_analyze_file_path()
+        self._audio_path = audio_path
+        self._analyze_file_path = self._build_analyze_file_path()
 
     def build(self):
-        analyze_type = self.get_analyze_type()
+        analyze_type = self._get_analyze_type()
 
         if analyze_type == AnalysisType.NOT_NECESSARY:
-            end_time, lines = self.prepare_analysis_file()
-            self.do_analysis(end_time, lines)
+            end_time, lines = self._prepare_analysis_file()
+            self._do_analysis(end_time, lines)
         elif analyze_type == AnalysisType.FULL:
-            self.delete_analysis_file_if_exists()
-            self.do_analysis()
+            self._delete_analysis_file_if_exists()
+            self._do_analysis()
         elif analyze_type == AnalysisType.CONTINUE:
             pass
         else:
             raise NotImplementedError(f"Not implemented for {analyze_type}")
 
-    def prepare_analysis_file(self):
+    def _prepare_analysis_file(self):
         end_time = None
-        with open(self.analyze_file_path, 'r') as file:
+        with open(self._analyze_file_path, 'r') as file:
             lines = file.readlines()
 
         # Find the last non-empty line that is a digit and remove it from lines
@@ -57,10 +57,10 @@ class SpeechFinder:
 
         return end_time, lines
 
-    def do_analysis(self, start_time=0, old_lines=()):
+    def _do_analysis(self, start_time=0, old_lines=()):
         segment_length_sec = 20
         wav_path = "temp_audio.wav"
-        convert_audio_to_wav(self.audio_path, wav_path)
+        convert_audio_to_wav(self._audio_path, wav_path)
 
         recognizer = sr.Recognizer()
 
@@ -73,36 +73,36 @@ class SpeechFinder:
 
         global interrupt
 
-        with open(self.analyze_file_path, "w") as file:
+        with open(self._analyze_file_path, "w") as file:
 
             if old_lines:
                 file.writelines(old_lines)
+            else:
+                segment_length = str(segment_length_sec)
+                file.write(segment_length + "\n")
+                print(segment_length)
 
-            segment_length = str(segment_length_sec)
-            file.write(segment_length + "\n")
-            print(segment_length)
+            segment_path = "temp_segment.wav"
 
             while start_time < total_length:
                 end_time = start_time + segment_length_sec
                 if end_time > total_length:
                     end_time = total_length
 
-                segment_path = "temp_segment.wav"
-
                 try:
                     extract_segment(wav_path, start_time, segment_length_sec, segment_path)
                     speech_segment = get_speech_segment(segment_path, recognizer)
                     if speech_segment:
-                        result = str(start_time) + " " + speech_segment
-                        file.write(result + "\n")
-                        print(result)
+                        line = str(start_time) + " " + speech_segment
+                        file.write(line + "\n")
+                        print(line)
                 finally:
                     if os.path.exists(segment_path):
                         os.remove(segment_path)
 
                 start_time = end_time
 
-                if interrupt:
+                if interrupt and end_time < total_length:
                     end = str(end_time)
                     file.write(end + "\n")
                     print(end)
@@ -114,38 +114,38 @@ class SpeechFinder:
         # Unset signal handler
         signal.signal(signal.SIGINT, signal.SIG_DFL)
 
-    def delete_analysis_file_if_exists(self):
-        if os.path.isfile(self.analyze_file_path):
-            os.remove(self.analyze_file_path)
+    def _delete_analysis_file_if_exists(self):
+        if os.path.isfile(self._analyze_file_path):
+            os.remove(self._analyze_file_path)
 
-    def build_analyze_file_path(self):
-        path, filename = os.path.split(self.audio_path)
+    def _build_analyze_file_path(self):
+        path, filename = os.path.split(self._audio_path)
         filename_without_suffix, _ = os.path.splitext(filename)
         return os.path.join(path, filename_without_suffix) + ".speech"
 
-    def get_analyze_type(self):
+    def _get_analyze_type(self):
 
-        status = self.check_file()
+        status = self._check_file()
 
         if (status == AnalyzeFileStatus.NOT_EXISTING or status == AnalyzeFileStatus.EMPTY or
                 status == AnalyzeFileStatus.FIRST_LINE_IS_NO_DIGIT):
-            pass
+            return AnalysisType.FULL
         elif status == AnalyzeFileStatus.SEVERAL_LINES_BUT_LAST_LINE_IS_NO_DIGIT:
-            pass
+            return AnalysisType.CONTINUE
         elif status == AnalyzeFileStatus.FILE_OK:
-            pass
+            return AnalysisType.NOT_NECESSARY
         else:
             raise NotImplementedError(f"Not implemented for {status}")
 
-    def check_file(self):
+    def _check_file(self):
 
-        if not os.path.isfile(self.analyze_file_path):
+        if not os.path.isfile(self._analyze_file_path):
             return AnalyzeFileStatus.NOT_EXISTING
 
-        if os.path.getsize(self.analyze_file_path) == 0:
+        if os.path.getsize(self._analyze_file_path) == 0:
             return AnalyzeFileStatus.EMPTY
 
-        with open(self.analyze_file_path, 'r') as analyze_file:
+        with open(self._analyze_file_path, 'r') as analyze_file:
             lines = analyze_file.readlines()
 
             first_line = lines[0].strip()
@@ -164,12 +164,6 @@ class SpeechFinder:
 def signal_handler(sig, frame):
     global interrupt
     interrupt = True
-
-
-def omit_suffix(path_and_filename):
-    path, filename = os.path.split(path_and_filename)
-    filename_without_suffix, _ = os.path.splitext(filename)
-    return os.path.join(path, filename_without_suffix)
 
 
 def convert_audio_to_wav(audio_path, wav_path):
@@ -204,10 +198,6 @@ def zip_textfile(file_path):
         zipf.write(file_path, arcname=file_path.split("/")[-1])
 
 
-
-
-
-
 # Global variable to track if the process should be interrupted
 interrupt = False
 
@@ -215,16 +205,16 @@ interrupt = False
 def main():
 
     if len(sys.argv) != 2:
-        print("missing mp3")
+        print("Missing audio file")
         sys.exit(1)
 
-    mp3_path = sys.argv[1]
+    audio_file_path = sys.argv[1]
 
-    if not os.path.isfile(mp3_path):
-        print(f"File not found: {mp3_path}")
+    if not os.path.isfile(audio_file_path):
+        print(f"File not found: {audio_file_path}")
         sys.exit(1)
 
-    analyze(mp3_path)
+    SpeechFinder(audio_file_path).build()
 
 
 if __name__ == "__main__":
