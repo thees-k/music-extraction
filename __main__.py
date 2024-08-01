@@ -1,85 +1,51 @@
 import os
 import subprocess
-import signal
 import sys
+from pathlib import Path
 from pydub import AudioSegment
-import speech_recognition as sr
+
+import speech_finder
+from speech_finder import build_analyze_file_path, AnalyzeFileStatus, check_file, SpeechFinder
 
 
-def signal_handler(sig, frame):
-    global interrupt
-    interrupt = True
-    print("\nProcess interrupted. Continuing with the found segments...")
+def find_music_segments(lines, total_length):
+    segment_length_sec = int(lines[0].strip())
 
-
-def convert_mp3_to_wav(mp3_path, wav_path):
-    command = f'ffmpeg -loglevel error -i "{mp3_path}" "{wav_path}"'
-    subprocess.call(command, shell=True)
-    print(f"Converted {mp3_path} to {wav_path}")
-
-
-def extract_segment(wav_path, start_time, duration, segment_path):
-    command = f'ffmpeg -loglevel error -ss {start_time} -t {duration} -i "{wav_path}" "{segment_path}"'
-    subprocess.call(command, shell=True)
-
-
-def get_speech_segment(segment_path, recognizer):
-    with sr.AudioFile(segment_path) as source:
-        audio_data = recognizer.record(source)
-        try:
-            return recognizer.recognize_google(audio_data, language="de-DE")
-        except sr.UnknownValueError:
-            return ""
-
-
-def analyze_audio_segments(wav_path, segment_length_sec=20):
-    recognizer = sr.Recognizer()
     segments = []
-
-    total_length = AudioSegment.from_wav(wav_path).duration_seconds
-    total_length_display = seconds_to_min_sec(int(total_length))
-    start_time = 0
-
-    is_music_running = False
     music_begin = 0
+    last_speech = "..."
 
-    global interrupt
+    for line in lines[1:]:
+        first_word = line.split(" ")[0]
+        print(f"first_word '{first_word}'")
+        speech_begin = int(first_word)
+        speech = line[len(first_word) + 1:].strip()
 
-    print("\nAnalyzing audio segments... (Press Ctrl+C to interrupt and proceed with found segments)")
+        if speech and speech_begin > music_begin + segment_length_sec:
+            segments.append(MusicSegment(music_begin, last_speech, speech_begin + segment_length_sec, speech))
 
-    while start_time < total_length and not interrupt:
-        end_time = start_time + segment_length_sec
-        if end_time > total_length:
-            end_time = total_length
+        if speech:
+            last_speech = speech
+            music_begin = speech_begin
 
-        segment_path = "temp_segment.wav"
-        if start_time % 60 == 0:
-            print(f"Timestamp {seconds_to_min_sec(start_time)} (of {total_length_display})...")
-
-        try:
-            extract_segment(wav_path, start_time, segment_length_sec, segment_path)
-            speech_segment = get_speech_segment(segment_path, recognizer)
-            if speech_segment:
-                if is_music_running:
-                    segments.append((music_begin, end_time, speech_segment))
-                    is_music_running = False
-                    print(f"-> Music stop between {seconds_to_min_sec(start_time)} and {seconds_to_min_sec(end_time)} :"
-                          f" \"{speech_segment}\"")
-            else:
-                if not is_music_running:
-                    music_begin = max(start_time - segment_length_sec, 0)
-                    is_music_running = True
-                    print(f"-> Music START between {seconds_to_min_sec(start_time)} and {seconds_to_min_sec(end_time)}")
-        finally:
-            if os.path.exists(segment_path):
-                os.remove(segment_path)
-
-        start_time = end_time
-
-    if is_music_running:
-        segments.append((music_begin, total_length, ""))
+    if int(total_length) > music_begin + segment_length_sec:
+        segments.append(MusicSegment(music_begin, last_speech, total_length, "..."))
 
     return segments
+
+
+class MusicSegment:
+    def __init__(self, begin_seconds, speech_before, end_seconds, speech_after):
+        self.begin_seconds = begin_seconds
+        self.speech_before = speech_before
+        self.end_seconds = end_seconds
+        self.speech_after = speech_after
+
+    def __str__(self):
+        duration = self.end_seconds - self.begin_seconds
+        return (f"{seconds_to_min_sec(self.begin_seconds)} {self.speech_before}\n"
+                f"{seconds_to_min_sec(self.end_seconds)} {self.speech_after}\n"
+                f"{seconds_to_min_sec(duration)}")
 
 
 def seconds_to_min_sec(seconds):
@@ -91,16 +57,14 @@ def seconds_to_min_sec(seconds):
 def print_music_segments(segments):
     print("\nMusic segments:")
     for no, segment in enumerate(segments, start=1):
-        start, end, speech = segment
-        start = int(start)
-        end = int(end)
-        length = end - start
-        print(f"{no}) {seconds_to_min_sec(start)} to {seconds_to_min_sec(end)} -> {seconds_to_min_sec(length)} ({speech})")
+        print(f"{no})")
+        print(segment)
         print()
 
 
 def merge_segments(segments, from_no, to_no):
-    return segments[from_no - 1][0], segments[to_no - 1][1], segments[to_no - 1][2]
+    return MusicSegment(segments[from_no - 1].begin_seconds, segments[from_no - 1].speech_before,
+                        segments[to_no - 1].end_seconds, segments[to_no - 1].speech_after)
 
 
 def get_user_input_segments_to_keep():
@@ -129,11 +93,12 @@ def combine_segments(segments, segments_to_keep):
 
 
 def get_user_confirmation():
-    return not input("Proceed with these segments? (Y/n): ").lower() == 'n'
+    return not input("Selected segments okay? (Y/n): ").lower() == 'n'
 
 
 def split_mp3(mp3_path, segments):
-    for i, (start, end, _) in enumerate(segments, start=1):
+    for i, segment in enumerate(segments, start=1):
+        start, end = segment.begin_seconds, segment.end_seconds
         output_path = f"output_segment_{i:02d}.mp3"  # Format the output filename with leading zeros
         command = f'ffmpeg -loglevel error -ss {start} -to {end} -i "{mp3_path}" -c copy "{output_path}"'
         subprocess.call(command, shell=True)
@@ -149,10 +114,6 @@ def get_user_combined_segments(segments):
         return combine_segments(segments, segments_to_keep)
 
 
-# Global variable to track if the process should be interrupted
-interrupt = False
-
-
 def main():
     if len(sys.argv) != 2:
         print("Usage: python3 __main__.py <path_to_mp3>")
@@ -164,19 +125,16 @@ def main():
         print(f"File not found: {mp3_path}")
         sys.exit(1)
 
-    wav_path = "temp_audio.wav"
-    convert_mp3_to_wav(mp3_path, wav_path)
+    analyze_file = build_analyze_file_path(Path(mp3_path))
+    total_length = AudioSegment.from_mp3(mp3_path).duration_seconds
 
-    # Register the signal handler
-    signal.signal(signal.SIGINT, signal_handler)
+    status = check_file(analyze_file)
+    if status is not AnalyzeFileStatus.FILE_OK:
+        SpeechFinder(mp3_path).find_segments()
+    with open(analyze_file, 'r') as file:
+        lines = [line for line in file.readlines() if line.strip()]
 
-    segments = analyze_audio_segments(wav_path)
-
-    # Unset signal handler
-    signal.signal(signal.SIGINT, signal.SIG_DFL)
-
-    os.remove(wav_path)
-    print(f"Removed temporary file {wav_path}")
+    segments = find_music_segments(lines, total_length)
 
     while True:
         print_music_segments(segments)

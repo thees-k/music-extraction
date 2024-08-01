@@ -116,7 +116,10 @@ class SpeechFinder:
         recognizer = sr.Recognizer()
         total_length = AudioSegment.from_file(flac_path).duration_seconds
         total_length_display = seconds_to_min_sec(int(total_length))
-        print("Analyzing audio segments... (Press Ctrl+C to interrupt)")
+        if old_lines:
+            print("Continue analysing audio segments... (Press Ctrl+C to interrupt)")
+        else:
+            print("Analysing audio segments... (Press Ctrl+C to interrupt)")
 
         signal.signal(signal.SIGINT, self._signal_handler)
         self._interrupt = False  # Reset interrupt flag before starting analysis
@@ -182,7 +185,7 @@ class SpeechFinder:
         Returns:
             AnalysisType: The type of analysis to perform.
         """
-        status = self._check_file()
+        status = check_file(self._analyze_file_path)
         if status in (AnalyzeFileStatus.NOT_EXISTING, AnalyzeFileStatus.EMPTY, AnalyzeFileStatus.FIRST_LINE_IS_NO_DIGIT):
             return AnalysisType.FULL
         elif status == AnalyzeFileStatus.SEVERAL_LINES_AND_LAST_LINE_IS_DIGIT:
@@ -191,32 +194,6 @@ class SpeechFinder:
             return AnalysisType.NOT_NECESSARY
         else:
             raise NotImplementedError(f"Not implemented for {status}")
-
-    def _check_file(self) -> AnalyzeFileStatus:
-        """
-        Check the status of the analysis file.
-
-        Returns:
-            AnalyzeFileStatus: The status of the analysis file.
-        """
-        if not os.path.isfile(self._analyze_file_path):
-            return AnalyzeFileStatus.NOT_EXISTING
-        if os.path.getsize(self._analyze_file_path) == 0:
-            return AnalyzeFileStatus.EMPTY
-
-        with open(self._analyze_file_path, 'r') as analyze_file:
-            lines = analyze_file.readlines()
-            first_line = lines[0].strip()
-            if not first_line.isdigit():
-                return AnalyzeFileStatus.FIRST_LINE_IS_NO_DIGIT
-
-            if len(lines) > 1:
-                last_line = find_last_non_empty_line(lines)
-                if last_line.isdigit():
-                    return AnalyzeFileStatus.SEVERAL_LINES_AND_LAST_LINE_IS_DIGIT
-                return AnalyzeFileStatus.FILE_OK
-            else:
-                return AnalyzeFileStatus.FILE_OK
 
     def _signal_handler(self, sig, frame):
         """
@@ -303,6 +280,37 @@ class SpeechFinder:
             except sr.RequestError as e:
                 logging.error(f"Could not request results from Google Speech Recognition service; {e}")
                 return None
+
+
+def check_file(analyze_file_path: str) -> AnalyzeFileStatus:
+    """
+    Check the status of the analysis file.
+
+    Returns:
+        AnalyzeFileStatus: The status of the analysis file.
+    """
+    if not os.path.isfile(analyze_file_path):
+        return AnalyzeFileStatus.NOT_EXISTING
+    if os.path.getsize(analyze_file_path) == 0:
+        return AnalyzeFileStatus.EMPTY
+
+    with open(analyze_file_path, 'r') as analyze_file:
+        lines = [line for line in analyze_file.readlines() if line.strip()]
+
+    if not lines:
+        return AnalyzeFileStatus.EMPTY
+
+    first_line = lines[0].strip()
+    if not first_line.isdigit():
+        return AnalyzeFileStatus.FIRST_LINE_IS_NO_DIGIT
+
+    if len(lines) > 1:
+        last_line = lines[-1]
+        if last_line.isdigit():
+            return AnalyzeFileStatus.SEVERAL_LINES_AND_LAST_LINE_IS_DIGIT
+        return AnalyzeFileStatus.FILE_OK
+    else:
+        return AnalyzeFileStatus.FILE_OK
 
 
 def build_analyze_file_path(audio_path: Path) -> str:
