@@ -10,7 +10,7 @@ import logging
 from pathlib import Path
 import socket
 
-logging.basicConfig(level=logging.INFO, format='%(asctime)s: %(message)s')
+logging.basicConfig(level=logging.ERROR, format='%(asctime)s: %(message)s')
 
 
 class AnalyzeFileStatus(Enum):
@@ -54,7 +54,7 @@ class SpeechFinder:
             audio_path (str): Path to the audio file.
         """
         self._audio_path = Path(audio_path)
-        self._analyze_file_path = self._build_analyze_file_path()
+        self._analyze_file_path = build_analyze_file_path(self._audio_path)
         self._interrupt = False
 
     def find_segments(self):
@@ -115,7 +115,8 @@ class SpeechFinder:
 
         recognizer = sr.Recognizer()
         total_length = AudioSegment.from_file(flac_path).duration_seconds
-        logging.info("Analyzing audio segments... (Press Ctrl+C to interrupt)")
+        total_length_display = seconds_to_min_sec(int(total_length))
+        print("Analyzing audio segments... (Press Ctrl+C to interrupt)")
 
         signal.signal(signal.SIGINT, self._signal_handler)
         self._interrupt = False  # Reset interrupt flag before starting analysis
@@ -130,6 +131,9 @@ class SpeechFinder:
             segment_path = Path("temp_segment.flac")
 
             while start_time < total_length:
+                if start_time % 60 == 0:
+                    print(f"{seconds_to_min_sec(start_time)} (of {total_length_display})...")
+
                 end_time = start_time + self.SEGMENT_LENGTH_SEC
                 if end_time > total_length:
                     end_time = total_length
@@ -157,7 +161,7 @@ class SpeechFinder:
 
                 if self._interrupt and end_time < total_length:
                     file.write(f"{end_time}\n")
-                    logging.info(f"Analysis interrupted at {end_time}.")
+                    print(f"User interrupted analysis at {seconds_to_min_sec(end_time)}.")
                     break
 
         os.remove(flac_path)
@@ -170,15 +174,6 @@ class SpeechFinder:
         """
         if os.path.isfile(self._analyze_file_path):
             os.remove(self._analyze_file_path)
-
-    def _build_analyze_file_path(self) -> str:
-        """
-        Build the path for the analysis file based on the audio file path.
-
-        Returns:
-            str: Path to the analysis file.
-        """
-        return str(self._audio_path.with_suffix('.speech'))
 
     def _get_analyze_type(self) -> AnalysisType:
         """
@@ -310,6 +305,16 @@ class SpeechFinder:
                 return None
 
 
+def build_analyze_file_path(audio_path: Path) -> str:
+    """
+    Build the path for the analysis file based on the given audio file path.
+
+    Returns:
+        str: Path to the analysis file.
+    """
+    return str(audio_path.with_suffix('.speech'))
+
+
 def find_last_non_empty_line(lines) -> str:
     """
     Find the last non-empty line in a list of lines.
@@ -323,6 +328,12 @@ def find_last_non_empty_line(lines) -> str:
     for line in reversed(lines):
         if line.strip():  # Checks if the string is not empty or whitespace only
             return line.strip()
+
+
+def seconds_to_min_sec(seconds):
+    minutes = seconds // 60
+    remaining_seconds = seconds % 60
+    return f"{minutes}:{remaining_seconds:02}"
 
 
 def zip_textfile(file_path: str):
