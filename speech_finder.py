@@ -282,6 +282,16 @@ class SpeechFinder:
                 return None
 
 
+def load_lines_of_analysis_file(analyze_file_path: str):
+    lines = []
+    with open(analyze_file_path, 'r') as analyze_file:
+        for line in analyze_file.readlines():
+            line_strip = line.strip()
+            if line_strip:
+                lines.append(line_strip)
+    return lines
+
+
 def check_file(analyze_file_path: str) -> AnalyzeFileStatus:
     """
     Check the status of the analysis file.
@@ -294,8 +304,7 @@ def check_file(analyze_file_path: str) -> AnalyzeFileStatus:
     if os.path.getsize(analyze_file_path) == 0:
         return AnalyzeFileStatus.EMPTY
 
-    with open(analyze_file_path, 'r') as analyze_file:
-        lines = [line for line in analyze_file.readlines() if line.strip()]
+    lines = load_lines_of_analysis_file(analyze_file_path)
 
     if not lines:
         return AnalyzeFileStatus.EMPTY

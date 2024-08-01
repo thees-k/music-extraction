@@ -5,7 +5,8 @@ from pathlib import Path
 from pydub import AudioSegment
 
 import speech_finder
-from speech_finder import build_analyze_file_path, AnalyzeFileStatus, check_file, SpeechFinder
+from speech_finder import (build_analyze_file_path, AnalyzeFileStatus, check_file, SpeechFinder,
+                           load_lines_of_analysis_file)
 
 
 def find_music_segments(lines, total_length):
@@ -17,9 +18,8 @@ def find_music_segments(lines, total_length):
 
     for line in lines[1:]:
         first_word = line.split(" ")[0]
-        print(f"first_word '{first_word}'")
         speech_begin = int(first_word)
-        speech = line[len(first_word) + 1:].strip()
+        speech = line[len(first_word) + 1:]
 
         if speech and speech_begin > music_begin + segment_length_sec:
             segments.append(MusicSegment(music_begin, last_speech, speech_begin + segment_length_sec, speech))
@@ -131,9 +131,8 @@ def main():
     status = check_file(analyze_file)
     if status is not AnalyzeFileStatus.FILE_OK:
         SpeechFinder(mp3_path).find_segments()
-    with open(analyze_file, 'r') as file:
-        lines = [line for line in file.readlines() if line.strip()]
 
+    lines = load_lines_of_analysis_file(analyze_file)
     segments = find_music_segments(lines, total_length)
 
     while True:
