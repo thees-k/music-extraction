@@ -63,10 +63,6 @@ class SpeechFinder:
         """
         analyze_type = self._get_analyze_type()
 
-        if not check_internet_connection():
-            logging.error("Program cannot be executed without connection to the internet")
-            exit(1)
-
         if analyze_type == AnalysisType.NOT_NECESSARY:
             pass
         elif analyze_type == AnalysisType.FULL:
@@ -74,6 +70,9 @@ class SpeechFinder:
             self._do_analysis()
         elif analyze_type == AnalysisType.CONTINUE:
             end_time, lines = self._prepare_analysis_file()
+            if not check_internet_connection():
+                logging.error("Program cannot be executed without connection to the internet")
+                exit(1)
             self._do_analysis(end_time, lines)
         else:
             raise NotImplementedError(f"Not implemented for {analyze_type}")
