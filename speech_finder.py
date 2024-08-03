@@ -4,11 +4,11 @@ import signal
 import sys
 from pydub import AudioSegment
 import speech_recognition as sr
-import zipfile
 from enum import Enum
 import logging
 from pathlib import Path
 import socket
+from seconds_formatter import seconds_to_min_sec
 
 logging.basicConfig(level=logging.ERROR, format='%(asctime)s: %(message)s')
 
@@ -63,7 +63,7 @@ class SpeechFinder:
         """
         analyze_type = self._get_analyze_type()
 
-        if not self.check_internet_connection():
+        if not check_internet_connection():
             logging.error("Program cannot be executed without connection to the internet")
             exit(1)
 
@@ -111,10 +111,10 @@ class SpeechFinder:
             old_lines (tuple, optional): Existing lines from a previous analysis. Defaults to ().
         """
         flac_path = Path("temp_audio.flac")
-        self.convert_audio_to_flac(self._audio_path, flac_path)
+        convert_audio_to_flac(self._audio_path, flac_path)
 
         recognizer = sr.Recognizer()
-        total_length = AudioSegment.from_file(flac_path).duration_seconds
+        total_length: float = AudioSegment.from_file(flac_path).duration_seconds
         total_length_display = seconds_to_min_sec(int(total_length))
         if old_lines:
             print("Continue analysing audio segments... (Press Ctrl+C to interrupt)")
@@ -142,8 +142,8 @@ class SpeechFinder:
                     end_time = total_length
 
                 try:
-                    self.extract_segment(flac_path, start_time, self.SEGMENT_LENGTH_SEC, segment_path)
-                    speech_segment = self.get_speech_segment(segment_path, recognizer)
+                    extract_segment(flac_path, start_time, self.SEGMENT_LENGTH_SEC, segment_path)
+                    speech_segment = get_speech_segment(segment_path, recognizer)
                     if speech_segment is None:
                         file.write(f"{start_time}\n")
                         logging.info(f"Analysis stopped at {start_time} due to a RequestError.")
@@ -152,6 +152,7 @@ class SpeechFinder:
                         line = f"{start_time} {speech_segment}"
                         file.write(line + "\n")
                         logging.info(line)
+                        print(f"{seconds_to_min_sec(start_time)} {speech_segment}")
                 except sr.RequestError as e:
                     logging.error(f"RequestError at segment starting at {start_time}: {e}")
                     file.write(f"{start_time}\n")
@@ -205,81 +206,81 @@ class SpeechFinder:
         """
         self._interrupt = True
 
-    @staticmethod
-    def convert_audio_to_flac(audio_path: Path, flac_path: Path):
-        """
-        Convert the audio file to FLAC format.
 
-        Args:
-            audio_path (Path): Path to the input audio file.
-            flac_path (Path): Path to the output FLAC file.
-        """
-        command = f'ffmpeg -loglevel error -i "{audio_path}" "{flac_path}"'
-        result = subprocess.call(command, shell=True)
-        if result != 0:
-            logging.error(f"Failed to convert {audio_path} to {flac_path}")
-            raise RuntimeError(f"ffmpeg conversion failed for {audio_path}")
-        logging.info(f"Converted {audio_path} to {flac_path}")
+def extract_segment(flac_path: Path, start_time: int, duration: int, segment_path: Path):
+    """
+    Extract a segment from the FLAC audio file.
 
-    @staticmethod
-    def extract_segment(flac_path: Path, start_time: int, duration: int, segment_path: Path):
-        """
-        Extract a segment from the FLAC audio file.
+    Args:
+        flac_path (Path): Path to the input FLAC file.
+        start_time (int): Start time of the segment in seconds.
+        duration (int): Duration of the segment in seconds.
+        segment_path (Path): Path to the output segment file.
+    """
+    command = f'ffmpeg -loglevel error -ss {start_time} -t {duration} -i "{flac_path}" "{segment_path}"'
+    result = subprocess.call(command, shell=True)
+    if result != 0:
+        logging.error(f"Failed to extract segment from {flac_path}")
+        raise RuntimeError(f"ffmpeg segment extraction failed for {flac_path}")
 
-        Args:
-            flac_path (Path): Path to the input FLAC file.
-            start_time (int): Start time of the segment in seconds.
-            duration (int): Duration of the segment in seconds.
-            segment_path (Path): Path to the output segment file.
-        """
-        command = f'ffmpeg -loglevel error -ss {start_time} -t {duration} -i "{flac_path}" "{segment_path}"'
-        result = subprocess.call(command, shell=True)
-        if result != 0:
-            logging.error(f"Failed to extract segment from {flac_path}")
-            raise RuntimeError(f"ffmpeg segment extraction failed for {flac_path}")
 
-    @staticmethod
-    def check_internet_connection(timeout=2):
-        """
-        Check if there is an internet connection by attempting to connect to a well-known host.
+def check_internet_connection(timeout=2):
+    """
+    Check if there is an internet connection by attempting to connect to a well-known host.
 
-        Args:
-            timeout (int, optional): Timeout in seconds for the connection attempt. Defaults to 2.
+    Args:
+        timeout (int, optional): Timeout in seconds for the connection attempt. Defaults to 2.
 
-        Returns:
-            bool: True if the internet connection is available, False otherwise.
-        """
+    Returns:
+        bool: True if the internet connection is available, False otherwise.
+    """
+    try:
+        # Try to connect to a well-known host (Google DNS server) on port 53 (DNS service)
+        socket.setdefaulttimeout(timeout)
+        host = socket.gethostbyname("8.8.8.8")
+        s = socket.create_connection((host, 53), timeout)
+        s.close()
+        return True
+    except OSError:
+        return False
+
+
+def get_speech_segment(segment_path: Path, recognizer: sr.Recognizer):
+    """
+    Perform speech recognition on the given audio segment.
+
+    Args:
+        segment_path (Path): Path to the audio segment file.
+        recognizer (sr.Recognizer): The speech recognizer instance.
+
+    Returns:
+        str: The recognized text from the audio segment, or None if a RequestError occurs.
+    """
+    with sr.AudioFile(str(segment_path)) as source:
+        audio_data = recognizer.record(source)
         try:
-            # Try to connect to a well-known host (Google DNS server) on port 53 (DNS service)
-            socket.setdefaulttimeout(timeout)
-            host = socket.gethostbyname("8.8.8.8")
-            s = socket.create_connection((host, 53), timeout)
-            s.close()
-            return True
-        except OSError:
-            return False
+            return recognizer.recognize_google(audio_data, language="de-DE")
+        except sr.UnknownValueError:
+            return ""
+        except sr.RequestError as e:
+            logging.error(f"Could not request results from Google Speech Recognition service; {e}")
+            return None
 
-    @staticmethod
-    def get_speech_segment(segment_path: Path, recognizer: sr.Recognizer):
-        """
-        Perform speech recognition on the given audio segment.
 
-        Args:
-            segment_path (Path): Path to the audio segment file.
-            recognizer (sr.Recognizer): The speech recognizer instance.
+def convert_audio_to_flac(audio_path: Path, flac_path: Path):
+    """
+    Convert the audio file to FLAC format.
 
-        Returns:
-            str: The recognized text from the audio segment, or None if a RequestError occurs.
-        """
-        with sr.AudioFile(str(segment_path)) as source:
-            audio_data = recognizer.record(source)
-            try:
-                return recognizer.recognize_google(audio_data, language="de-DE")
-            except sr.UnknownValueError:
-                return ""
-            except sr.RequestError as e:
-                logging.error(f"Could not request results from Google Speech Recognition service; {e}")
-                return None
+    Args:
+        audio_path (Path): Path to the input audio file.
+        flac_path (Path): Path to the output FLAC file.
+    """
+    command = f'ffmpeg -loglevel error -i "{audio_path}" "{flac_path}"'
+    result = subprocess.call(command, shell=True)
+    if result != 0:
+        logging.error(f"Failed to convert {audio_path} to {flac_path}")
+        raise RuntimeError(f"ffmpeg conversion failed for {audio_path}")
+    logging.info(f"Converted {audio_path} to {flac_path}")
 
 
 def load_lines_of_analysis_file(analyze_file_path: str):
@@ -309,7 +310,7 @@ def check_file(analyze_file_path: str) -> AnalyzeFileStatus:
     if not lines:
         return AnalyzeFileStatus.EMPTY
 
-    first_line = lines[0].strip()
+    first_line = lines[0]
     if not first_line.isdigit():
         return AnalyzeFileStatus.FIRST_LINE_IS_NO_DIGIT
 
@@ -330,39 +331,6 @@ def build_analyze_file_path(audio_path: Path) -> str:
         str: Path to the analysis file.
     """
     return str(audio_path.with_suffix('.speech'))
-
-
-def find_last_non_empty_line(lines) -> str:
-    """
-    Find the last non-empty line in a list of lines.
-
-    Args:
-        lines (List[str]): List of lines to search through.
-
-    Returns:
-        str: The last non-empty line, or None if no such line is found.
-    """
-    for line in reversed(lines):
-        if line.strip():  # Checks if the string is not empty or whitespace only
-            return line.strip()
-
-
-def seconds_to_min_sec(seconds):
-    minutes = seconds // 60
-    remaining_seconds = seconds % 60
-    return f"{minutes}:{remaining_seconds:02}"
-
-
-def zip_textfile(file_path: str):
-    """
-    Create a zip file containing the given text file.
-
-    Args:
-        file_path (str): Path to the text file to be zipped.
-    """
-    zip_path = file_path + ".zip"
-    with zipfile.ZipFile(zip_path, 'w') as zipf:
-        zipf.write(file_path, arcname=Path(file_path).name)
 
 
 def main():

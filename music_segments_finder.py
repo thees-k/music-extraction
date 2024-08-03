@@ -4,23 +4,34 @@ from music_segment import MusicSegment
 def find(lines: list, total_length: float):
     segment_length_sec = int(lines[0])
 
-    segments = []
-    music_begin = 0
+    last_speech_begin = 0
+    last_speech_end = 0
     last_speech = "..."
 
+    segments = []
     for line in lines[1:]:
-        first_word = line.split(" ")[0]
-        speech_begin = int(first_word)
-        speech = line[len(first_word) + 1:]
+        speech_begin, speech = fetch_begin_and_speech(line)
 
-        if speech and speech_begin > music_begin + segment_length_sec:
-            segments.append(MusicSegment(music_begin, last_speech, speech_begin + segment_length_sec, speech))
+        if not speech:
+            break
 
-        if speech:
-            last_speech = speech
-            music_begin = speech_begin
+        if speech_begin > last_speech_end:
+            segments.append(MusicSegment(last_speech_begin, last_speech, speech_begin + segment_length_sec, speech))
 
-    if int(total_length) > music_begin + segment_length_sec:
-        segments.append(MusicSegment(music_begin, last_speech, total_length, "..."))
+        last_speech_begin = speech_begin
+        last_speech_end = speech_begin + segment_length_sec
+        last_speech = speech
+
+    speech_begin = total_length
+    speech = "..."
+    if speech_begin > last_speech_end:
+        segments.append(MusicSegment(last_speech_begin, last_speech, speech_begin, speech))
 
     return segments
+
+
+def fetch_begin_and_speech(line: str):
+    first_word = line.split(" ")[0]
+    speech_begin = int(first_word)
+    speech = line[len(first_word) + 1:]
+    return speech_begin, speech

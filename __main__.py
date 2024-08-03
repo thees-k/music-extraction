@@ -3,55 +3,11 @@ import subprocess
 import sys
 from pathlib import Path
 from pydub import AudioSegment
-
-import speech_finder
 from speech_finder import (build_analyze_file_path, AnalyzeFileStatus, check_file, SpeechFinder,
                            load_lines_of_analysis_file)
-
-
-def find_music_segments(lines, total_length):
-    segment_length_sec = int(lines[0].strip())
-
-    segments = []
-    music_begin = 0
-    last_speech = "..."
-
-    for line in lines[1:]:
-        first_word = line.split(" ")[0]
-        speech_begin = int(first_word)
-        speech = line[len(first_word) + 1:]
-
-        if speech and speech_begin > music_begin + segment_length_sec:
-            segments.append(MusicSegment(music_begin, last_speech, speech_begin + segment_length_sec, speech))
-
-        if speech:
-            last_speech = speech
-            music_begin = speech_begin
-
-    if int(total_length) > music_begin + segment_length_sec:
-        segments.append(MusicSegment(music_begin, last_speech, total_length, "..."))
-
-    return segments
-
-
-class MusicSegment:
-    def __init__(self, begin_seconds, speech_before, end_seconds, speech_after):
-        self.begin_seconds = begin_seconds
-        self.speech_before = speech_before
-        self.end_seconds = end_seconds
-        self.speech_after = speech_after
-
-    def __str__(self):
-        duration = self.end_seconds - self.begin_seconds
-        return (f"{seconds_to_min_sec(self.begin_seconds)} {self.speech_before}\n"
-                f"{seconds_to_min_sec(self.end_seconds)} {self.speech_after}\n"
-                f"{seconds_to_min_sec(duration)}")
-
-
-def seconds_to_min_sec(seconds):
-    minutes = seconds // 60
-    remaining_seconds = seconds % 60
-    return f"{minutes}:{remaining_seconds:02}"
+from music_segments_finder import find as find_music_segments
+from seconds_formatter import seconds_to_min_sec
+from music_segments_finder import MusicSegment
 
 
 def print_music_segments(segments):
@@ -92,10 +48,6 @@ def combine_segments(segments, segments_to_keep):
     return combined_segments
 
 
-def get_user_confirmation():
-    return not input("Selected segments okay? (Y/n): ").lower() == 'n'
-
-
 def split_mp3(mp3_path, segments):
     for i, segment in enumerate(segments, start=1):
         start, end = segment.begin_seconds, segment.end_seconds
@@ -112,6 +64,10 @@ def get_user_combined_segments(segments):
     else:
         segments_to_keep = parse_user_input(user_input)
         return combine_segments(segments, segments_to_keep)
+
+
+def get_user_confirmation(question):
+    return not input(f"{question} (Y/n): ").lower() == 'n'
 
 
 def main():
@@ -139,10 +95,10 @@ def main():
         print_music_segments(segments)
         combined_segments = get_user_combined_segments(segments)
         print_music_segments(combined_segments)
-        if get_user_confirmation():
+        if get_user_confirmation("Selected segments okay?"):
             break
 
-    if not input("Do you want to split the MP3 based on these segments? (Y/n): ").lower() == 'n':
+    if get_user_confirmation("Do you want to split the MP3 based on these segments?"):
         split_mp3(mp3_path, combined_segments)
 
 
