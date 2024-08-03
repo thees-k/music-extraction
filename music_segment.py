@@ -1,4 +1,5 @@
 from math import isclose
+from seconds_formatter import seconds_to_min_sec
 
 
 class MusicSegment:
@@ -19,9 +20,3 @@ class MusicSegment:
                 self.speech_before == other.speech_before and
                 isclose(self.end_seconds, other.end_seconds, abs_tol=0.01) and
                 self.speech_after == other.speech_after)
-
-
-def seconds_to_min_sec(seconds):
-    minutes = seconds // 60
-    remaining_seconds = seconds % 60
-    return f"{minutes}:{remaining_seconds:02}"
