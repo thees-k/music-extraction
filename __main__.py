@@ -1,10 +1,7 @@
 import os
 import subprocess
 import sys
-from pathlib import Path
-from pydub import AudioSegment
-from speech_finder import (build_analyze_file_path, AnalyzeFileStatus, check_file, SpeechFinder,
-                           load_lines_of_analysis_file)
+from speech_finder import SpeechFinder
 from music_segments_finder import find as find_music_segments
 from seconds_formatter import seconds_to_min_sec
 from music_segments_finder import MusicSegment
@@ -81,14 +78,7 @@ def main():
         print(f"File not found: {mp3_path}")
         sys.exit(1)
 
-    analyze_file = build_analyze_file_path(Path(mp3_path))
-    total_length = AudioSegment.from_mp3(mp3_path).duration_seconds
-
-    status = check_file(analyze_file)
-    if status is not AnalyzeFileStatus.FILE_OK:
-        SpeechFinder(mp3_path).find_segments()
-
-    lines = load_lines_of_analysis_file(analyze_file)
+    lines, total_length = SpeechFinder(mp3_path).find_segments()
     segments = find_music_segments(lines, total_length)
 
     while True:
