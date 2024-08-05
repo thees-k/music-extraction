@@ -15,7 +15,7 @@ def extract_segment(flac_path: Path, start_time: int, duration: int, segment_nam
         segment_name (Path): Path to the output segment file.
     """
     segment_path = Path(segment_name)
-    command = f'ffmpeg -loglevel error -ss {start_time} -t {duration} -i "{flac_path}" "{segment_path}"'
+    command = f'ffmpeg -loglevel error -ss {start_time} -t {duration} -i "{flac_path}" -c copy "{segment_path}"'
     result = subprocess.call(command, shell=True)
     if result != 0:
         logging.error(f"Failed to extract segment from {flac_path}")
