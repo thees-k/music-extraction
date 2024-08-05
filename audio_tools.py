@@ -4,47 +4,54 @@ from pathlib import Path
 from pydub import AudioSegment
 
 
-def extract_segment(flac_path: Path, start_time: int, duration: int, segment_name="temp_segment.flac"):
+def extract_segment(wav_path: Path, start_time: int, duration: int, segment_name="temp_segment.wav"):
     """
-    Extract a segment from the FLAC audio file.
+    Extract a segment from the WAV audio file.
 
     Args:
-        flac_path (Path): Path to the input FLAC file.
+        wav_path (Path): Path to the input FLAC file.
         start_time (int): Start time of the segment in seconds.
         duration (int): Duration of the segment in seconds.
         segment_name (Path): Path to the output segment file.
     """
     segment_path = Path(segment_name)
-    command = f'ffmpeg -loglevel error -ss {start_time} -t {duration} -i "{flac_path}" -c copy "{segment_path}"'
+    command = f'ffmpeg -loglevel error -ss {start_time} -t {duration} -i "{wav_path}" -c copy "{segment_path}"'
     result = subprocess.call(command, shell=True)
     if result != 0:
-        logging.error(f"Failed to extract segment from {flac_path}")
-        raise RuntimeError(f"ffmpeg segment extraction failed for {flac_path}")
+        logging.error(f"Failed to extract segment from {wav_path}")
+        raise RuntimeError(f"ffmpeg segment extraction failed for {wav_path}")
     return segment_path
 
 
-def convert_audio_to_flac(audio_path: Path, flac_name="temp_audio.flac"):
+def convert_audio_to_wav(audio_path: Path, wav_name="temp_audio.wav"):
     """
-    Convert the audio file to FLAC format.
+    Convert the audio file to WAV format suitable for Pocketsphinx.
 
     Args:
         audio_path (Path): Path to the input audio file.
-        flac_name (Path): Name of the output FLAC file.
+        wav_name (str): Name of the output WAV file.
     """
-    flac_path = Path(flac_name)
-    command = f'ffmpeg -loglevel error -i "{audio_path}" "{flac_path}"'
-    result = subprocess.call(command, shell=True)
-    if result != 0:
-        logging.error(f"Failed to convert {audio_path} to {flac_path}")
-        raise RuntimeError(f"ffmpeg conversion failed for {audio_path}")
-    logging.info(f"Converted {audio_path} to {flac_path}")
-    return flac_path
+    wav_path = Path(wav_name)
+    try:
+        audio = AudioSegment.from_file(audio_path)
+        audio = audio.set_frame_rate(16000).set_channels(1)
+        audio.export(wav_path, format="wav")
+        logging.info(f"Converted {audio_path} to {wav_path}")
+    except Exception as e:
+        logging.error(f"Failed to convert {audio_path} to {wav_path}: {e}")
+        raise RuntimeError(f"Conversion to WAV failed for {audio_path}")
+
+    return wav_path
 
 
 def get_total_length_of_audio(audio_path: Path) -> float:
     """
-    Get the total length of the given audio file in seconds
-    :param audio_path: the audio file
-    :return: the total length of the given audio file in seconds
+    Get the total length of the given audio file in seconds.
+
+    Args:
+        audio_path (Path): Path to the audio file.
+
+    Returns:
+        float: Total length of the audio file in seconds.
     """
     return AudioSegment.from_file(audio_path).duration_seconds
