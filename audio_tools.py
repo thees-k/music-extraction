@@ -15,7 +15,7 @@ def extract_segment(wav_path: Path, start_time: int, duration: int, segment_name
         segment_name (Path): Path to the output segment file.
     """
     segment_path = Path(segment_name)
-    command = f'ffmpeg -loglevel error -ss {start_time} -t {duration} -i "{wav_path}" -c copy "{segment_path}"'
+    command = f'ffmpeg -loglevel error -ss {start_time} -t {duration} -i "{wav_path}" "{segment_path}"'
     result = subprocess.call(command, shell=True)
     if result != 0:
         logging.error(f"Failed to extract segment from {wav_path}")
