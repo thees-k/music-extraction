@@ -27,7 +27,7 @@ class AudioSegmentAnalyser:
             str: The recognized text from the audio segment.
         """
         config = {
-            'verbose': True,
+            'verbose': False,
             'audio_file': str(segment_path),
             'buffer_size': 2048,
             'no_search': False,
