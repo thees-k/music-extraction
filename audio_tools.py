@@ -32,7 +32,7 @@ def convert_audio_to_flac(audio_path: Path, flac_name="temp_audio.flac"):
         flac_name (Path): Name of the output FLAC file.
     """
     flac_path = Path(flac_name)
-    command = f'ffmpeg -loglevel error -i "{audio_path}" "{flac_path}"'
+    command = f'ffmpeg -loglevel error -i "{audio_path}" -ar 8000 -ac 1 "{flac_path}"'
     result = subprocess.call(command, shell=True)
     if result != 0:
         logging.error(f"Failed to convert {audio_path} to {flac_path}")
