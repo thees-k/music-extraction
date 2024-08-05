@@ -3,7 +3,7 @@ import signal
 import sys
 from enum import Enum
 from pathlib import Path
-from audio_tools import extract_segment, convert_audio_to_wav, get_total_length_of_audio
+from audio_tools import extract_segment, convert_audio_to_flac, get_total_length_of_audio
 from seconds_formatter import seconds_to_min_sec
 from audio_segment_analyser import AudioSegmentAnalyser
 
@@ -79,8 +79,8 @@ class SpeechFinder:
         Args:
             old_lines (tuple, optional): Existing lines from a previous analysis. Defaults to ().
         """
-        print("Convert audio to WAV...")
-        wav_path = convert_audio_to_wav(self._audio_path)  # Convert to WAV
+        print("Convert audio to FLAC...")
+        flac_path = convert_audio_to_flac(self._audio_path)
 
         segment_analyser = AudioSegmentAnalyser()
         total_length_display = seconds_to_min_sec(int(self._total_length))
@@ -112,7 +112,7 @@ class SpeechFinder:
                     end_time = self._total_length
 
                 try:
-                    segment_path = extract_segment(wav_path, start_time, self.SEGMENT_LENGTH_SEC)
+                    segment_path = extract_segment(flac_path, start_time, self.SEGMENT_LENGTH_SEC)
                     speech_segment = segment_analyser.get_speech(segment_path)
                     if speech_segment:
                         line = f"{start_time} {speech_segment}"
@@ -130,9 +130,9 @@ class SpeechFinder:
                     break
 
         signal.signal(signal.SIGINT, signal.SIG_DFL)
-        if os.path.exists(wav_path):
-            print("Cleanup WAV")
-            os.remove(wav_path)
+        if os.path.exists(flac_path):
+            print("Cleanup FLAC")
+            os.remove(flac_path)
 
     @staticmethod
     def needs_print(start_time):
