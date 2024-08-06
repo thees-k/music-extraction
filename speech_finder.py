@@ -3,7 +3,7 @@ import signal
 import sys
 from enum import Enum
 from pathlib import Path
-from audio_tools import extract_segment, convert_audio_to_flac, get_total_length_of_audio
+from audio_tools import extract_segment, convert_audio, get_total_length_of_audio
 from seconds_formatter import seconds_to_min_sec
 from audio_segment_analyser import AudioSegmentAnalyser
 
@@ -79,8 +79,8 @@ class SpeechFinder:
         Args:
             old_lines (tuple, optional): Existing lines from a previous analysis. Defaults to ().
         """
-        print("Convert audio to FLAC...")
-        flac_path = convert_audio_to_flac(self._audio_path)
+        print("Convert audio...")
+        flac_path = convert_audio(self._audio_path)
 
         segment_analyser = AudioSegmentAnalyser()
         total_length_display = seconds_to_min_sec(int(self._total_length))

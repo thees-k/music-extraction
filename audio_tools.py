@@ -23,7 +23,7 @@ def extract_segment(flac_path: Path, start_time: int, duration: int, segment_nam
     return segment_path
 
 
-def convert_audio_to_flac(audio_path: Path, flac_name="temp_audio.flac"):
+def convert_audio(audio_path: Path, flac_name="temp_audio.flac"):
     """
     Convert the audio file to FLAC format.
 
