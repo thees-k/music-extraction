@@ -1,49 +1,22 @@
 from pathlib import Path
-
-import speech_recognition as sr
-import socket
+import wave
+from vosk import Model, KaldiRecognizer
+import os
+import json
 
 
 class AudioSegmentAnalyser:
     def __init__(self):
-        self._recognizer = sr.Recognizer()
-        self._language = "de-DE"
-        if not AudioSegmentAnalyser._check_internet_connection():
-            print("Program cannot be executed without connection to the internet")
-            exit(1)
+        # Initialize Vosk model
+        model_path = os.path.expanduser("~/.local/lib/vosk-model-de-0.21")  # Update this to your Vosk model path
+        if not os.path.exists(model_path):
+            raise FileNotFoundError(f"Model path {model_path} does not exist. Please download and unzip a Vosk model.")
 
-    @property
-    def language(self):
-        return self._language
-
-    @language.setter
-    def language(self, language):
-        self._language = language
-
-    @classmethod
-    def _check_internet_connection(cls, timeout=2):
-        """
-        Check if there is an internet connection by attempting to connect to a well-known host.
-
-        Args:
-            timeout (int, optional): Timeout in seconds for the connection attempt. Defaults to 2.
-
-        Returns:
-            bool: True if the internet connection is available, False otherwise.
-        """
-        try:
-            # Try to connect to a well-known host (Google DNS server) on port 53 (DNS service)
-            socket.setdefaulttimeout(timeout)
-            host = socket.gethostbyname("8.8.8.8")
-            s = socket.create_connection((host, 53), timeout)
-            s.close()
-            return True
-        except OSError:
-            return False
+        self.model = Model(model_path)
 
     def get_speech(self, segment_path: Path):
         """
-        Perform speech recognition on the given audio segment.
+        Perform speech recognition on the given audio segment using Vosk.
 
         Args:
             segment_path (Path): Path to the audio segment file.
@@ -51,9 +24,33 @@ class AudioSegmentAnalyser:
         Returns:
             str: The recognized text from the audio segment.
         """
-        with sr.AudioFile(str(segment_path)) as source:
-            audio_data = self._recognizer.record(source)
-            try:
-                return self._recognizer.recognize_google(audio_data, language=self._language)
-            except sr.UnknownValueError:
-                return ""
+        wf = wave.open(str(segment_path), "rb")
+
+        # Ensure the audio file is in the correct format
+        if wf.getnchannels() != 1 or wf.getsampwidth() != 2 or wf.getframerate() != 16000:
+            raise ValueError("Audio file must be WAV format with mono channel, 16-bit samples, and 16 kHz sample rate.")
+
+        recognizer = KaldiRecognizer(self.model, wf.getframerate())
+
+        recognized_text = []
+        while True:
+            data = wf.readframes(4000)
+            if len(data) == 0:
+                break
+            if recognizer.AcceptWaveform(data):
+                result = json.loads(recognizer.Result())
+                recognized_text.append(result['text'])
+            else:
+                partial_result = json.loads(recognizer.PartialResult())
+
+        final_result = json.loads(recognizer.FinalResult())
+        recognized_text.append(final_result['text'])
+
+        return " ".join(recognized_text)
+
+
+# Example usage
+if __name__ == "__main__":
+    analyser = AudioSegmentAnalyser()
+    test_audio_path = Path("test_audio.wav")  # Update to your test audio file path
+    print("Recognized Speech: ", analyser.get_speech(test_audio_path))
