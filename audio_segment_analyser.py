@@ -8,11 +8,14 @@ import json
 class AudioSegmentAnalyser:
     def __init__(self):
         # Initialize Vosk model
-        model_path = os.path.expanduser("~/.local/lib/vosk-model-de-0.21")  # Update this to your Vosk model path
+        # model_path = os.path.expanduser("~/.local/lib/vosk-model-de-0.21")  # normal version
+        model_path = os.path.expanduser("~/.local/lib/vosk-model-small-de-0.15")  # small version
+        # model_path = os.path.expanduser("~/.local/lib/vosk-model-de-tuda-0.6-900k")  # large version
+
         if not os.path.exists(model_path):
             raise FileNotFoundError(f"Model path {model_path} does not exist. Please download and unzip a Vosk model.")
-
         self.model = Model(model_path)
+        self._total_word_count = 0
 
     def get_speech(self, segment_path: Path):
         """
@@ -32,21 +35,33 @@ class AudioSegmentAnalyser:
 
         recognizer = KaldiRecognizer(self.model, wf.getframerate())
 
-        recognized_text = []
+        self._total_word_count = 0
+        text = []
         while True:
             data = wf.readframes(4000)
             if len(data) == 0:
                 break
             if recognizer.AcceptWaveform(data):
-                result = json.loads(recognizer.Result())
-                recognized_text.append(result['text'])
-            else:
-                partial_result = json.loads(recognizer.PartialResult())
+                words = self.fetch_words(recognizer.Result())
+                self._append_words_to_text(text, words)
 
-        final_result = json.loads(recognizer.FinalResult())
-        recognized_text.append(final_result['text'])
+        words = self.fetch_words(recognizer.FinalResult())
+        self._append_words_to_text(text, words)
 
-        return " ".join(recognized_text)
+        if self._total_word_count > 4:
+            return " ".join(text)
+        else:
+            return ""
+
+    def _append_words_to_text(self, recognized_text, words):
+        word_count = len(words.split())
+        if word_count:
+            self._total_word_count += word_count
+            recognized_text.append(words)
+
+    @staticmethod
+    def fetch_words(result):
+        return json.loads(result)['text'].strip()
 
 
 # Example usage

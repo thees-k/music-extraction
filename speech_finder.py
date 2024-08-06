@@ -3,9 +3,10 @@ import signal
 import sys
 from enum import Enum
 from pathlib import Path
-from audio_tools import extract_segment, convert_audio, get_total_length_of_audio
+from audio_tools import extract_segment, create_analysable_audio, get_total_length_of_audio
 from seconds_formatter import seconds_to_min_sec
 from audio_segment_analyser import AudioSegmentAnalyser
+from vosk import SetLogLevel
 
 
 class AnalyzeFileStatus(Enum):
@@ -52,6 +53,7 @@ class SpeechFinder:
         self._analyze_file_path = str(self._audio_path.with_suffix('.speech'))
         self._interrupt = False
         self._total_length = 0.0
+        SetLogLevel(-1)
 
     def find_segments(self):
         self._total_length = get_total_length_of_audio(self._audio_path)
@@ -79,8 +81,8 @@ class SpeechFinder:
         Args:
             old_lines (tuple, optional): Existing lines from a previous analysis. Defaults to ().
         """
-        print("Convert audio...")
-        converted_audio_path = convert_audio(self._audio_path)
+        print("Create analysable audio file...")
+        analysable_audio_path = create_analysable_audio(self._audio_path)
 
         segment_analyser = AudioSegmentAnalyser()
         total_length_display = seconds_to_min_sec(int(self._total_length))
@@ -104,21 +106,20 @@ class SpeechFinder:
                 file.write(f"{self.SEGMENT_LENGTH_SEC}\n")
 
             while start_time < self._total_length:
-                if self.needs_print(start_time):
-                    print(f"{seconds_to_min_sec(start_time)} (of {total_length_display})...")
-
                 end_time = start_time + self.SEGMENT_LENGTH_SEC
                 if end_time > self._total_length:
                     end_time = self._total_length
 
                 try:
-                    segment_path = extract_segment(converted_audio_path, start_time, self.SEGMENT_LENGTH_SEC,
+                    segment_path = extract_segment(analysable_audio_path, start_time, self.SEGMENT_LENGTH_SEC,
                                                    segment_name=f"tmp_segment_{start_time}.wav")
                     speech_segment = segment_analyser.get_speech(segment_path)
                     if speech_segment:
                         line = f"{start_time} {speech_segment}"
                         file.write(line + "\n")
                         print(f"{seconds_to_min_sec(start_time)} {speech_segment}")
+                    elif self.needs_print(start_time):
+                        print(f"{seconds_to_min_sec(start_time)} (of {total_length_display})...")
                 finally:
                     if os.path.exists(segment_path):
                         os.remove(segment_path)
@@ -131,9 +132,9 @@ class SpeechFinder:
                     break
 
         signal.signal(signal.SIGINT, signal.SIG_DFL)
-        if os.path.exists(converted_audio_path):
-            print("Cleanup converted audio")
-            os.remove(converted_audio_path)
+        if os.path.exists(analysable_audio_path):
+            print("Cleanup analysable audio file")
+            os.remove(analysable_audio_path)
 
     @staticmethod
     def needs_print(start_time):
