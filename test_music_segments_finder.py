@@ -7,7 +7,8 @@ class TestMusicSegmentsFinder(TestCase):
         lines = ["20",
                  "0 at 0",
                  "20 at 20",
-                 "60 at 60"]
+                 "60 at 60",
+                 "end"]
         total_length = 80
         expected_segments = [
             MusicSegment(20, "at 20", 80, "at 60")
@@ -19,13 +20,15 @@ class TestMusicSegmentsFinder(TestCase):
                  "0 at 0",
                  "20 at 20",
                  "40 at 40",
-                 "60 at 60"]
+                 "60 at 60",
+                 "end"]
         total_length = 80
         expected_segments = []
         self.assertEqual(expected_segments, find(lines, total_length))
 
     def test_find_largest_possible_segment(self):
-        lines = ["20"]
+        lines = ["20",
+                 "end"]
         total_length = 80
         expected_segments = [
             MusicSegment(0, "...", 80, "...")
@@ -36,7 +39,8 @@ class TestMusicSegmentsFinder(TestCase):
         lines = ["20",
                  "20 at 20",
                  "40 at 40",
-                 "60 at 60"]
+                 "60 at 60",
+                 "end"]
         total_length = 80
         expected_segments = [
             MusicSegment(0, "...", 40, "at 20")
@@ -47,7 +51,8 @@ class TestMusicSegmentsFinder(TestCase):
         lines = ["20",
                  "0 at 0",
                  "20 at 20",
-                 "40 at 40"]
+                 "40 at 40",
+                 "end"]
         total_length = 80
         expected_segments = [
             MusicSegment(40, "at 40", 80, "...")
@@ -58,7 +63,8 @@ class TestMusicSegmentsFinder(TestCase):
         lines = ["20",
                  "0 at 0",
                  "40 at 40",
-                 "80 at 80"]
+                 "80 at 80",
+                 "end"]
         total_length = 100
         expected_segments = [
             MusicSegment(0, "at 0", 60, "at 40"),
@@ -71,7 +77,8 @@ class TestMusicSegmentsFinder(TestCase):
                  "0 at 0",
                  "20 at 20",
                  "40 at 40",
-                 "60 at 60"]
+                 "60 at 60",
+                 "end"]
         total_length = 90
         expected_segments = [
             MusicSegment(60, "at 60", 90, "...")
@@ -83,7 +90,8 @@ class TestMusicSegmentsFinder(TestCase):
                  "0 at 0",
                  "20 at 20",
                  "40 at 40",
-                 "60 at 60"]
+                 "60 at 60",
+                 "end"]
         total_length = 80.1
         expected_segments = [
             MusicSegment(60, "at 60", 80.1, "...")
@@ -96,7 +104,8 @@ class TestMusicSegmentsFinder(TestCase):
                  "10 at 10",
                  "20 at 20",
                  "30 at 30",
-                 "50 at 50"]
+                 "50 at 50",
+                 "end"]
         total_length = 60
         expected_segments = [
             MusicSegment(30, "at 30", 60, "at 50")
@@ -106,7 +115,8 @@ class TestMusicSegmentsFinder(TestCase):
     def test_find_at_begin_and_in_the_middle(self):
         lines = ["20",
                  "20 at 20",
-                 "60 at 60"]
+                 "60 at 60",
+                 "end"]
         total_length = 80
         expected_segments = [
             MusicSegment(0, "...", 40, "at 20"),
@@ -117,7 +127,8 @@ class TestMusicSegmentsFinder(TestCase):
     def test_find_in_the_middle_and_at_end(self):
         lines = ["20",
                  "0 at 0",
-                 "40 at 40"]
+                 "40 at 40",
+                 "end"]
         total_length = 80
         expected_segments = [
             MusicSegment(0, "at 0", 60, "at 40"),
@@ -130,7 +141,8 @@ class TestMusicSegmentsFinder(TestCase):
                  "0 at 0",
                  "20 at 20",
                  "100 at 100",
-                 "120 at 120"]
+                 "120 at 120",
+                 "end"]
         total_length = 140
         expected_segments = [
             MusicSegment(20, "at 20", 120, "at 100")
@@ -141,7 +153,8 @@ class TestMusicSegmentsFinder(TestCase):
         lines = ["20",
                  "0 hello world!",
                  "40 at this is a very long text that makes no sense",
-                 "80 at all. Year. Blabla"]
+                 "80 at all. Year. Blabla",
+                 "end"]
         total_length = 100
         expected_segments = [
             MusicSegment(0, "hello world!", 60, "at this is a very long text that makes no sense"),
@@ -153,7 +166,8 @@ class TestMusicSegmentsFinder(TestCase):
         lines = ["20",
                  "20 at 20",
                  "40 at 40",
-                 "100 at 100"]
+                 "100 at 100",
+                 "end"]
         total_length = 130
         expected_segments = [
             MusicSegment(0, "...", 40, "at 20"),
@@ -166,7 +180,8 @@ class TestMusicSegmentsFinder(TestCase):
         lines = ["20",
                  "20 at 20",
                  "40 at 40",
-                 "100 at 100"]
+                 "100 at 100",
+                 "end"]
         total_length = 120.1
         expected_segments = [
             MusicSegment(0, "...", 40, "at 20"),
@@ -180,7 +195,8 @@ class TestMusicSegmentsFinder(TestCase):
                  "0 at 0",
                  "20 at 20",
                  "40 at 40",
-                 "60 at 60"]
+                 "60 at 60",
+                 "end"]
         total_length = 70
         expected_segments = []
         self.assertEqual(expected_segments, find(lines, total_length))
@@ -189,7 +205,8 @@ class TestMusicSegmentsFinder(TestCase):
         lines = ["20",
                  "0 at 0",
                  "20 at 20",
-                 "40 at 40"]
+                 "40 at 40",
+                 "end"]
         total_length = 70
         expected_segments = [
             MusicSegment(40, "at 40", 70, "...")

@@ -15,9 +15,9 @@ class AnalyzeFileStatus(Enum):
     """
     NOT_EXISTING = 'not_existing'
     EMPTY = 'empty'
-    FIRST_LINE_IS_NO_DIGIT = 'first_line_is_no_digit'
+    INCORRECT = 'corrupt_file'
     SEVERAL_LINES_AND_LAST_LINE_IS_DIGIT = 'several_lines_and_last_line_is_digit'
-    FULLY_ANALYSED = 'fully_analysed'
+    SEVERAL_LINES_AND_LAST_LINE_IS_END = 'fully_analysed'
 
 
 class NecessaryAnalysis(Enum):
@@ -130,8 +130,11 @@ class SpeechFinder:
                     file.write(f"{end_time}\n")
                     print(f"User interrupted analysis at {seconds_to_min_sec(end_time)}.")
                     break
+            else:
+                file.write(f"end\n")
 
         signal.signal(signal.SIGINT, signal.SIG_DFL)
+
         if os.path.exists(analysable_audio_path):
             print("Cleanup analysable audio file")
             os.remove(analysable_audio_path)
@@ -157,11 +160,11 @@ class SpeechFinder:
         status = self._get_analyze_file_status()
         if status in (AnalyzeFileStatus.NOT_EXISTING,
                       AnalyzeFileStatus.EMPTY,
-                      AnalyzeFileStatus.FIRST_LINE_IS_NO_DIGIT):
+                      AnalyzeFileStatus.INCORRECT):
             return NecessaryAnalysis.FULLY
         elif status == AnalyzeFileStatus.SEVERAL_LINES_AND_LAST_LINE_IS_DIGIT:
             return NecessaryAnalysis.CONTINUE
-        elif status == AnalyzeFileStatus.FULLY_ANALYSED:
+        elif status == AnalyzeFileStatus.SEVERAL_LINES_AND_LAST_LINE_IS_END:
             return NecessaryAnalysis.NOT_NECESSARY
         else:
             raise NotImplementedError(f"Not implemented for {status}")
@@ -185,15 +188,18 @@ class SpeechFinder:
 
         first_line = lines[0]
         if not first_line.isdigit():
-            return AnalyzeFileStatus.FIRST_LINE_IS_NO_DIGIT
+            return AnalyzeFileStatus.INCORRECT
 
-        if len(lines) > 1:
+        if len(lines) > 1: # more than 1 lines
             last_line = lines[-1]
-            if last_line.isdigit():
+            if last_line == "end":
+                return AnalyzeFileStatus.SEVERAL_LINES_AND_LAST_LINE_IS_END
+            elif last_line.isdigit():
                 return AnalyzeFileStatus.SEVERAL_LINES_AND_LAST_LINE_IS_DIGIT
-            return AnalyzeFileStatus.FULLY_ANALYSED
-        else:
-            return AnalyzeFileStatus.FULLY_ANALYSED
+            else:
+                return AnalyzeFileStatus.INCORRECT
+        else: # only 1 line
+            return AnalyzeFileStatus.INCORRECT
 
     def _load_lines_of_analysis_file(self):
         lines = []
