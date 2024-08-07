@@ -1,10 +1,17 @@
 import os
 import subprocess
 import sys
+from argparse import ArgumentParser, Namespace
+
 from speech_finder import SpeechFinder
 from music_segments_finder import find as find_music_segments
 from seconds_formatter import seconds_to_min_sec
 from music_segments_finder import MusicSegment
+
+
+"""
+Extracts music parts from an audio file (e.g. a radio recording)
+"""
 
 
 def print_music_segments(segments):
@@ -65,6 +72,18 @@ def get_user_combined_segments(segments):
 
 def get_user_confirmation(question):
     return not input(f"{question} (Y/n): ").lower() == 'n'
+
+
+def init_argument_parser() -> Namespace:
+    parser = ArgumentParser(description=__doc__)
+    parser.add_argument('audio_file', metavar='audio file', type=str,
+                        help='The audio file that should be analysed / where music parts should be extracted from')
+
+    # Option without argument (a flag!):
+    parser.add_argument('-a', '--analyse', action='store_speech_file',
+                        help='If set, the audio file will be analysed only (for later faster extraction)')
+
+    return parser.parse_args()
 
 
 def main():
