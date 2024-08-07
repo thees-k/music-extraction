@@ -1,0 +1,78 @@
+# Music Extraction
+
+Music Extraction is a Python-based tool designed to process audio recordings, detect segments of speech and music, and optionally extract music segments into separate audio files. The project leverages the Vosk library for offline speech recognition and supports multiple audio formats including MP3, FLAC, and AAC.
+
+## Features
+
+- **Speech Detection**: Identify and analyze speech segments within audio recordings using the Vosk speech recognition library.
+- **Music Segmentation**: Automatically find and extract music segments from audio files.
+- **Multi-Format Support**: Process audio files in MP3, FLAC, and AAC formats.
+- **Interactive User Interface**: Command-line interface for selecting and confirming music segments to extract.
+
+## Installation
+
+### Prerequisites
+
+- Python 3.7 or higher
+- FFmpeg installed on your system (required for audio processing)
+
+### Setup
+
+1. **Clone the Repository**
+
+   ```bash
+   git clone https://github.com/yourusername/music-extraction.git
+   cd music-extraction
+   ```
+
+2. **Create a Virtual Environment**
+
+   ```bash
+   python3 -m venv venv
+   source venv/bin/activate  # On Windows use `venv\Scripts\activate`
+   ```
+
+3. **Install Dependencies**
+
+   ```bash
+   pip install -r requirements.txt
+   ```
+
+4. **Download and Setup Vosk Model**
+
+    Place the Vosk model in the models directory:
+
+   * Download the Vosk model (e.g., vosk-model-small-de-0.15) from Vosk's model repository and extract it into the models directory.
+
+### Usage
+
+To analyze an audio file and extract music segments, run the following command:
+
+   ```bash
+   python3 -m music_extraction <audio_file> [-a|--analyse]
+   ```
+* <audio_file>: Path to the audio file to be analyzed.
+
+* -a or --analyse: Optional flag to perform analysis only, without extracting segments.
+
+
+#### Example
+
+   ```bash
+   python3 -m music_extraction test.mp3
+   ```
+Follow the on-screen prompts to select segments for extraction and specify names for the output files.
+
+
+### License
+
+This project is licensed under the MIT License. See the LICENSE file for details.
+
+### Acknowledgments
+
+* **Vosk Speech Recognition**: This project uses the Vosk library, licensed under the Apache License 2.0. See the LICENSE-APACHE file for details.
+* Special thanks to the contributors of the open-source libraries and tools that made this project possible.
+
+### Contact
+
+For any questions or inquiries, please contact yourname.

@@ -4,16 +4,16 @@ from vosk import Model, KaldiRecognizer
 import os
 import json
 
+# This software uses the Vosk library for speech recognition.
+# Vosk is licensed under the Apache License 2.0.
+
 
 class AudioSegmentAnalyser:
     def __init__(self):
-        # Initialize Vosk model
-        # model_path = os.path.expanduser("~/.local/lib/vosk-model-de-0.21")  # normal version
-        model_path = os.path.expanduser("~/.local/lib/vosk-model-small-de-0.15")  # small version
-        # model_path = os.path.expanduser("~/.local/lib/vosk-model-de-tuda-0.6-900k")  # large version
-
+        model_path = os.path.expanduser("~/.local/models/vosk-model-small-de-0.15")  # small version
         if not os.path.exists(model_path):
             raise FileNotFoundError(f"Model path {model_path} does not exist. Please download and unzip a Vosk model.")
+
         self.model = Model(model_path)
         self._total_word_count = 0
 

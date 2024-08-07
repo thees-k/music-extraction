@@ -46,8 +46,27 @@ def create_analysable_audio(audio_path: Path, wav_name="temp_audio.wav"):
 
 def get_total_length_of_audio(audio_path: Path) -> float:
     """
-    Get the total length of the given audio file in seconds
-    :param audio_path: the audio file
-    :return: the total length of the given audio file in seconds
+    Get the total length of an audio file in seconds using ffprobe.
+
+    Args:
+        audio_path (Path): Path to the audio file.
+
+    Returns:
+        float: Total length of the audio file in seconds.
     """
-    return AudioSegment.from_file(audio_path).duration_seconds
+    command = [
+        'ffprobe', '-i', str(audio_path),
+        '-show_entries', 'format=duration',
+        '-v', 'quiet',
+        '-of', 'csv=p=0'
+    ]
+
+    try:
+        result = subprocess.run(command, capture_output=True, text=True, check=True)
+        duration_str = result.stdout.strip()
+        duration = float(duration_str)
+        return duration
+    except subprocess.CalledProcessError as e:
+        logging.error(f"Error occurred while retrieving audio duration: {e}")
+        raise RuntimeError(f"Retrieving audio duration failed for {audio_path}")
+
