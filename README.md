@@ -45,11 +45,14 @@ It has been tested for multiple audio formats including MP3, FLAC, and AAC.
    pip install -r requirements.txt
    ```
 
-4. **Download and Setup Vosk Model**
+4. **Download and Setup Speech Model**
 
-    Place the Vosk model in the models directory:
+ 
+   * Download a speech model that is compatible with Vosk-API (source is https://alphacephei.com/vosk/models)
+     * You should download a **small** model for better speed (e.g. `vosk-model-small-de-0.15` for German)!
 
-   * Download the Vosk model (e.g., vosk-model-small-de-0.15) from Vosk's model repository and extract it into the models directory.
+   * Unpack it in your local directory `~/.local/models/`
+
 
 ### Usage
 
