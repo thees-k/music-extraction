@@ -1,7 +1,14 @@
 # Music Extraction
 
-Music Extraction is a Python-based tool designed to process audio recordings, detect segments of speech and music, and optionally extract music segments into separate audio files. The project leverages the Vosk library for offline speech recognition and supports multiple audio formats including MP3, FLAC, and AAC.
+Music Extraction is a Python-based tool designed to extract the segments of an audio file that contains music only.
 
+The basic idea is that if a part of an audio file does not contain any speech (if it's not detectable with **Vosk speech recognition**), it must contain music.
+
+Audio files are at first analyzed, then you can select the segments with no speech (= the segments with music!) and extract them. For extraction **ffmpeg** is used and so there will be no reencoding / quality loss.
+
+Please note that this tool does not work perfect. The start and end the extracted music segments usually contain some spoken words: Maximum 20 seconds of speech at the beginning and end of an extracted music segment.
+
+It has been tested for multiple audio formats including MP3, FLAC, and AAC.
 ## Features
 
 - **Speech Detection**: Identify and analyze speech segments within audio recordings using the Vosk speech recognition library.
@@ -49,7 +56,7 @@ Music Extraction is a Python-based tool designed to process audio recordings, de
 To analyze an audio file and extract music segments, run the following command:
 
    ```bash
-   python3 -m music_extraction <audio_file> [-a|--analyse]
+   python3 music_extraction.py <audio_file> [-a|--analyse]
    ```
 * <audio_file>: Path to the audio file to be analyzed.
 
@@ -59,7 +66,7 @@ To analyze an audio file and extract music segments, run the following command:
 #### Example
 
    ```bash
-   python3 -m music_extraction test.mp3
+   python3 music_extraction.py test.mp3
    ```
 Follow the on-screen prompts to select segments for extraction and specify names for the output files.
 
