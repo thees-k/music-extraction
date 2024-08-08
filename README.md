@@ -82,7 +82,3 @@ This project is licensed under the MIT License. See the LICENSE file for details
 
 * **Vosk Speech Recognition**: This project uses the Vosk library, licensed under the Apache License 2.0. See the LICENSE-APACHE file for details.
 * Special thanks to the contributors of the open-source libraries and tools that made this project possible.
-
-### Contact
-
-For any questions or inquiries, please contact yourname.
