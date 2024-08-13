@@ -158,7 +158,7 @@ The user can then assign a name for the music segments to be extracted and the m
 3. **Install Dependencies**
 
    ```bash
-   pip install -r requirements.txt
+   pip3 install -r requirements.txt
    ```
 
 4. **Download and Setup Speech Model**
