@@ -42,14 +42,17 @@ def backup(audio_path):
 class AudioTrimmer:
 
     def __init__(self, audio_path: Path, to_be_analysed_segment_length: float,
-                 less_silence_beginning=0.3, less_silence_end=0.3):
+                 less_silence_beginning=0.2, less_silence_end=0.2, with_backup = False):
         self._audio_path = audio_path
         self._to_be_analysed_segment_length = to_be_analysed_segment_length
         self._less_silence_beginning = less_silence_beginning
         self._less_silence_end = less_silence_end
-
+        self._with_backup = with_backup
+        self._trimmed_length = 0.0
 
     def trim(self):
+        # reset trimmed_length
+        self._trimmed_length = 0.0
         tmp_wav_path = None
         try:
             tmp_wav_path = copy_to_tmp_wav(self._audio_path)
@@ -60,6 +63,7 @@ class AudioTrimmer:
 
             begin = self._find_begin(tmp_wav_path)
             end = self._find_end(tmp_wav_path, total_duration)
+            self._trimmed_length = end - begin
         finally:
             if tmp_wav_path and tmp_wav_path.exists():
                 tmp_wav_path.unlink()
@@ -68,7 +72,7 @@ class AudioTrimmer:
         suffix = self._audio_path.suffix
         audio_path_backup = backup(self._audio_path)
         split_audio(audio_path_backup, begin, end, file_name, suffix)
-        if audio_path_backup.exists():
+        if audio_path_backup.exists() and not self._with_backup:
             audio_path_backup.unlink()
 
     def _find_begin(self, tmp_wav_path):
@@ -99,3 +103,7 @@ class AudioTrimmer:
         finally:
             if partial_audio and partial_audio.exists():
                 partial_audio.unlink()
+
+    @property
+    def trimmed_length(self):
+        return self._trimmed_length
