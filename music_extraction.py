@@ -10,7 +10,7 @@ from music_segments_finder import find as find_music_segments
 from seconds_formatter import seconds_to_min_sec
 from music_segments_finder import MusicSegment
 import re
-
+from audio_tools import mp3_gain
 
 """
 Extracts music parts from an audio file (e.g. a radio recording)
@@ -59,15 +59,19 @@ def split_audio(audio_path, segments):
     file_extension = os.path.splitext(audio_path)[1]
     for no, segment in enumerate(segments, start=1):
         start, end = segment.begin_seconds, segment.end_seconds
-        output_path = f'{no:02d}_{extraction_name}{file_extension}'
+        output_path = Path(f'{no:02d}_{extraction_name}{file_extension}')
         duration = end - start
-        command = create_ffmpeg_split_command(file_extension, audio_path, output_path, start, duration)
+        command = create_ffmpeg_split_command(file_extension, audio_path, str(output_path), start, duration)
         subprocess.call(command, shell=True)
         # TODO dont hardcode 25.0
-        audio_trimmer = AudioTrimmer(Path(output_path), 25.0, with_backup = True)
+        audio_trimmer = AudioTrimmer(output_path, 25.0, with_backup = True)
         audio_trimmer.trim()
-        print(f"Exported {output_path} from ~{seconds_to_min_sec(start)} to ~{seconds_to_min_sec(end)} "
+        print(f"Exported {str(output_path)} from ~{seconds_to_min_sec(start)} to ~{seconds_to_min_sec(end)} "
               f"({seconds_to_min_sec(audio_trimmer.trimmed_length)})")
+        if output_path.suffix.lower() == ".mp3":
+            mp3_gain(output_path)
+            mp3_gain(audio_trimmer.audio_path_backup)
+
 
 
 def create_ffmpeg_split_command(file_extension, audio_path, output_path, start, duration):

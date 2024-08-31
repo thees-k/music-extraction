@@ -91,3 +91,10 @@ def create_ffmpeg_split_command(suffix, audio_path, output_path, start, duration
         return f'ffmpeg -loglevel error -i "{audio_path}" -ss {start} -t {duration} "{output_path}"'
     else:
         return f'ffmpeg -loglevel error -ss {start} -i "{audio_path}" -t {duration} -c copy "{output_path}"'
+
+
+def mp3_gain(mp3_audio_path: Path):
+    try:
+        result = subprocess.call(f"mp3gain -r -k \"{str(mp3_audio_path)}\"", shell=True)
+    except subprocess.CalledProcessError as e:
+        raise RuntimeError(f"Error executing mp3gain: {e}")
