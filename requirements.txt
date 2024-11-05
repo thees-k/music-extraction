@@ -1,6 +1,2 @@
 vosk==0.3.45
 pydub==0.25.1
-
-torch~=2.4.0
-torchaudio~=2.4.0
-numpy~=2.0.1

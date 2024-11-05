@@ -2,9 +2,6 @@ import os
 import subprocess
 import sys
 from argparse import ArgumentParser, Namespace
-from pathlib import Path
-
-from audio_trimmer import AudioTrimmer
 from speech_finder import SpeechFinder
 from music_segments_finder import find as find_music_segments
 from seconds_formatter import seconds_to_min_sec
@@ -63,8 +60,6 @@ def split_audio(audio_path, segments):
         duration = end - start
         command = create_ffmpeg_split_command(file_extension, audio_path, output_path, start, duration)
         subprocess.call(command, shell=True)
-        # TODO dont hardcode 25.0
-        AudioTrimmer(Path(output_path), 25.0).trim()
         print(f"Exported {output_path} from {seconds_to_min_sec(start)} to {seconds_to_min_sec(end)} "
               f"({seconds_to_min_sec(duration)})")
 
