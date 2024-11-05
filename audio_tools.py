@@ -73,7 +73,7 @@ def get_total_length_of_audio(audio_path: Path) -> float:
 
 def copy_to_tmp_wav(audio_path: Path):
     new_name = "tmp_" + audio_path.stem + ".wav"
-    command = f'ffmpeg -loglevel error -i "{audio_path}" -ar 16000 "{new_name}"'
+    command = f'ffmpeg -loglevel error -i "{audio_path}" "{new_name}"'
     subprocess.call(command, shell=True)
     return Path(new_name)
 
