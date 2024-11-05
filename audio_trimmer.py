@@ -1,7 +1,7 @@
 from pathlib import Path
 # import torch, torchaudio, numpy
 import torch
-from audio_tools import get_total_length_of_audio, split_audio, create_analysable_audio
+from audio_tools import get_total_length_of_audio, copy_to_tmp_wav, split_audio
 
 
 def _get_begin_of_speech(audio_path):
@@ -63,8 +63,7 @@ class AudioTrimmer:
         self._trimmed_length = 0.0
         tmp_wav_path = None
         try:
-            # tmp_wav_path = copy_to_tmp_wav(self._audio_path)
-            tmp_wav_path = create_analysable_audio(self._audio_path, wav_name= "tmp_" + self._audio_path.stem + ".wav")
+            tmp_wav_path = copy_to_tmp_wav(self._audio_path)
             total_duration = get_total_length_of_audio(tmp_wav_path)
             if total_duration < self._to_be_analysed_segment_length:
                 print(f"Length of {self._audio_path} is smaller than {self._to_be_analysed_segment_length} seconds.")
