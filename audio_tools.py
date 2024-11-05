@@ -24,6 +24,13 @@ def extract_segment(wav_path: Path, start_time: int, duration: int, segment_name
 
 
 def create_analysable_audio(audio_path: Path, wav_name="temp_audio.wav"):
+    """
+    Convert the audio file to WAV format suitable for Pocketsphinx.
+
+    Args:
+        audio_path (Path): Path to the input audio file.
+        wav_name (str): Name of the output WAV file.
+    """
     wav_path = Path(wav_name)
     try:
         audio = AudioSegment.from_file(audio_path)
