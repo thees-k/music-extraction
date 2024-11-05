@@ -24,13 +24,6 @@ def extract_segment(wav_path: Path, start_time: int, duration: int, segment_name
 
 
 def create_analysable_audio(audio_path: Path, wav_name="temp_audio.wav"):
-    """
-    Convert the audio file to WAV format suitable for Pocketsphinx.
-
-    Args:
-        audio_path (Path): Path to the input audio file.
-        wav_name (str): Name of the output WAV file.
-    """
     wav_path = Path(wav_name)
     try:
         audio = AudioSegment.from_file(audio_path)
@@ -70,3 +63,31 @@ def get_total_length_of_audio(audio_path: Path) -> float:
         logging.error(f"Error occurred while retrieving audio duration: {e}")
         raise RuntimeError(f"Retrieving audio duration failed for {audio_path}")
 
+
+# def copy_to_tmp_wav(audio_path: Path):
+#     new_name = "tmp_" + audio_path.stem + ".wav"
+#     command = f'ffmpeg -loglevel error -i "{audio_path}" -ar 16000 "{new_name}"'
+#     subprocess.call(command, shell=True)
+#     return Path(new_name)
+
+
+def split_audio(audio_path, start, end, output_name: str, suffix: str) -> Path:
+    output_path = Path(output_name + suffix)
+    duration = end - start
+    command = create_ffmpeg_split_command(suffix, audio_path, output_path, start, duration)
+    subprocess.call(command, shell=True)
+    return output_path
+
+
+def create_ffmpeg_split_command(suffix, audio_path, output_path, start, duration):
+    if suffix.lower() in [".flac", ".wav"]:
+        return f'ffmpeg -loglevel error -i "{audio_path}" -ss {start} -t {duration} "{output_path}"'
+    else:
+        return f'ffmpeg -loglevel error -ss {start} -i "{audio_path}" -t {duration} -c copy "{output_path}"'
+
+
+def mp3_gain(mp3_audio_path: Path):
+    try:
+        result = subprocess.call(f"mp3gain -r -k \"{str(mp3_audio_path)}\"", shell=True)
+    except subprocess.CalledProcessError as e:
+        raise RuntimeError(f"Error executing mp3gain: {e}")

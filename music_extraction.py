@@ -2,16 +2,21 @@ import os
 import subprocess
 import sys
 from argparse import ArgumentParser, Namespace
+from pathlib import Path
+
+from audio_trimmer import AudioTrimmer
 from speech_finder import SpeechFinder
 from music_segments_finder import find as find_music_segments
 from seconds_formatter import seconds_to_min_sec
 from music_segments_finder import MusicSegment
 import re
-
+from audio_tools import mp3_gain
 
 """
 Extracts music parts from an audio file (e.g. a radio recording)
 """
+
+DEFAULT_LESS_SILENCE_SECONDS = 0.2
 
 
 def print_music_segments(segments):
@@ -52,16 +57,26 @@ def combine_segments(segments, segments_to_keep):
     return combined_segments
 
 
-def split_audio(audio_path, segments):
+def split_audio(audio_path, segments, less_silence_beginning, less_silence_end):
     file_extension = os.path.splitext(audio_path)[1]
     for no, segment in enumerate(segments, start=1):
         start, end = segment.begin_seconds, segment.end_seconds
-        output_path = f'{no:02d}_{extraction_name}{file_extension}'
+        output_path = Path(f'{no:02d}_{extraction_name}{file_extension}')
         duration = end - start
-        command = create_ffmpeg_split_command(file_extension, audio_path, output_path, start, duration)
+        command = create_ffmpeg_split_command(file_extension, audio_path, str(output_path), start, duration)
         subprocess.call(command, shell=True)
-        print(f"Exported {output_path} from {seconds_to_min_sec(start)} to {seconds_to_min_sec(end)} "
-              f"({seconds_to_min_sec(duration)})")
+        audio_trimmer = AudioTrimmer(output_path,
+                                     SpeechFinder.SEGMENT_LENGTH_SEC + 5.0,
+                                     less_silence_beginning = less_silence_beginning,
+                                     less_silence_end = less_silence_end,
+                                     with_backup = True)
+        audio_trimmer.trim()
+        print(f"Exported {str(output_path)} from ~{seconds_to_min_sec(start)} to ~{seconds_to_min_sec(end)} "
+              f"({seconds_to_min_sec(audio_trimmer.trimmed_length)})")
+        if output_path.suffix.lower() == ".mp3":
+            mp3_gain(output_path)
+            mp3_gain(audio_trimmer.audio_path_backup)
+
 
 
 def create_ffmpeg_split_command(file_extension, audio_path, output_path, start, duration):
@@ -93,6 +108,13 @@ def init_argument_parser() -> Namespace:
     parser.add_argument('-a', '--analyse', action='store_true',
                         help='If set, the audio file will be analysed only (for later faster extraction)')
 
+    parser.add_argument('-b', '--less_silence_beginning', type=float,
+                        default=DEFAULT_LESS_SILENCE_SECONDS,
+                        help='Less silence at the beginning of the trimmed audio file in seconds')
+    parser.add_argument('-e', '--less_silence_end', type=float,
+                        default=DEFAULT_LESS_SILENCE_SECONDS,
+                        help='Less silence at the end of the trimmed audio file in seconds')
+
     return parser.parse_args()
 
 
@@ -121,6 +143,14 @@ def main():
     if not os.path.isfile(audio_path):
         print(f"File not found: {audio_path}")
         sys.exit(1)
+    less_silence_beginning = float(args.less_silence_beginning)
+    if less_silence_beginning < 0.0:
+        print("The value for -b/--less_silence_beginning must not be negative.")
+        sys.exit(1)
+    less_silence_end = float(args.less_silence_end)
+    if less_silence_end < 0.0:
+        print("The value for -e/--less_silence_end must not be negative.")
+        sys.exit(1)
 
     lines, total_length = SpeechFinder(audio_path).find_segments()
 
@@ -134,7 +164,7 @@ def main():
                 break
         global extraction_name
         extraction_name = get_user_input_extraction_name()
-        split_audio(audio_path, combined_segments)
+        split_audio(audio_path, combined_segments, less_silence_beginning, less_silence_end)
 
 
 if __name__ == "__main__":
