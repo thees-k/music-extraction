@@ -31,21 +31,6 @@ def _get_speech_timestamps(audio_path, threshold=0.5, min_speech_duration_ms=250
     )
 
 
-def _backup(audio_path):
-    original_name = audio_path.name
-    backup_name = audio_path.stem + "_with_speech" + audio_path.suffix
-    audio_path_backup = audio_path.with_name(backup_name)
-    try:
-        audio_path.rename(audio_path_backup)
-    except FileNotFoundError:
-        raise RuntimeError(f'Not found: "{original_name}"')
-    except PermissionError:
-        raise RuntimeError(f'You do not have permission to rename file "{original_name}".')
-    except Exception as e:
-        raise RuntimeError(f'An error occurred: {e}')
-    return audio_path_backup
-
-
 class AudioTrimmer:
 
     def __init__(self, audio_path: Path, to_be_analysed_segment_length: float,
@@ -56,7 +41,7 @@ class AudioTrimmer:
         self._less_silence_end = less_silence_end
         self._with_backup = with_backup
         self._trimmed_length = 0.0
-        self._audio_path_backup = None
+        self._backup_name = ""
 
     def trim(self):
         # reset trimmed_length
@@ -78,11 +63,10 @@ class AudioTrimmer:
 
         file_name = self._audio_path.stem
         suffix = self._audio_path.suffix
-        self._audio_path_backup = _backup(self._audio_path)
-        split_audio(self._audio_path_backup, begin, end, file_name, suffix)
-        if self._audio_path_backup.exists() and not self._with_backup:
-            self._audio_path_backup.unlink()
-            self._audio_path_backup = None
+        audio_path_backup = self._backup(self._audio_path)
+        split_audio(audio_path_backup, begin, end, file_name, suffix)
+        if audio_path_backup.exists() and not self._with_backup:
+            audio_path_backup.unlink()
 
     def _find_begin(self, tmp_wav_path):
         partial_audio = None
@@ -113,10 +97,24 @@ class AudioTrimmer:
             if partial_audio and partial_audio.exists():
                 partial_audio.unlink()
 
+    def _backup(self, audio_path):
+        original_name = audio_path.name
+        self._backup_name = audio_path.stem + "_with_speech" + audio_path.suffix
+        audio_path_backup = audio_path.with_name(self._backup_name)
+        try:
+            audio_path.rename(audio_path_backup)
+        except FileNotFoundError:
+            raise RuntimeError(f'Not found: "{original_name}"')
+        except PermissionError:
+            raise RuntimeError(f'You do not have permission to rename file "{original_name}".')
+        except Exception as e:
+            raise RuntimeError(f'An error occurred: {e}')
+        return audio_path_backup
+
     @property
     def trimmed_length(self):
         return self._trimmed_length
 
     @property
-    def audio_path_backup(self):
-        return self._audio_path_backup
+    def backup_name(self):
+        return self._backup_name
