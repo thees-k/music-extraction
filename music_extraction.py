@@ -63,6 +63,8 @@ def split_audio(audio_path, segments):
         duration = end - start
         command = create_ffmpeg_split_command(file_extension, audio_path, output_path, start, duration)
         subprocess.call(command, shell=True)
+        print(f"Exported {output_path} from {seconds_to_min_sec(start)} to {seconds_to_min_sec(end)} "
+              f"({seconds_to_min_sec(duration)})")
         # TODO dont hardcode 25.0
         audio_trimmer = AudioTrimmer(Path(output_path), 25.0, with_backup = True)
         audio_trimmer.trim()
