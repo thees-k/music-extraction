@@ -99,7 +99,7 @@ class AudioTrimmer:
 
     def _backup(self, audio_path):
         original_name = audio_path.name
-        self._backup_name = audio_path.stem + "_with_speech" + audio_path.suffix
+        self._backup_name = audio_path.stem + "_org" + audio_path.suffix
         audio_path_backup = audio_path.with_name(self._backup_name)
         try:
             audio_path.rename(audio_path_backup)
