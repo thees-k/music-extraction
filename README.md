@@ -198,7 +198,7 @@ drwxrwxr-x 13 thees thees 4,0K Okt 29 09:02  ..
 1. **Clone the Repository**
 
    ```bash
-   git clone https://github.com/yourusername/music-extraction.git
+   git clone https://github.com/thees-k/music-extraction.git
    cd music-extraction
    ```
 
