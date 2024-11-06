@@ -186,7 +186,7 @@ drwxrwxr-x 13 thees thees 4,0K Okt 29 09:02  ..
 
 ### Prerequisites
 
-- Python 3.12 or higher
+- Python 3.8 or higher
 - `ffmpeg` installed on your system (required for audio processing)
 - `mp3gain` in case you want to extract from MP3s
 
