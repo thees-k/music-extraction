@@ -68,8 +68,11 @@ Analysing audio segments... (Press Ctrl+C to interrupt)
 27:00 (of 116:02)...
 ...
 ```
+You see that there are parts with speech (e.g. from 0:00 to 2:20 and from 19:00 to 22:40) and other parts where no speech could be detected (e.g. from 3:00 to 18:00). The parts with no speech are most likely parts with music only! But they can contain speech at the beginning and at the end.
 
-**Phase 2**: The results are presented to the user on the console. The user can combine and select segments.
+**Phase 2**:
+
+The results are presented to the user on the console. The user can combine and select "music segments" (those segments may contain speech at the beginning and at the end).
 
 ```bash
 Music segments:
@@ -105,11 +108,11 @@ Music segments:
 
 Enter the segments to keep (e.g., 1,2-3,6) or press the Enter key to keep all: 
 ```
-Several of these segments can be combined. This is useful because some pieces of music also contain speech (e.g. opera arias) and because Vosk Speech Recognition sometimes incorrectly detects speech (false positives).
+Several of these segments can be combined. This is useful because some pieces of music contain speech in the middle (e.g. opera arias) and because Vosk Speech Recognition sometimes incorrectly detects speech (false positives).
 
 **Phase 3**: Extraction & Fine-Tuning
 
-After the user set the name for extractions, the script will extract the segments and do fine-tuning and, if the audio file is MP3, execute `mp3gain`.
+After the user set the name for extractions, the script will extract the segments and do fine-tuning. If the audio file is an MP3, it will execute `mp3gain` with it.
 
 Here I entered "Konzert Vinnitskaya, NDR Elbphilharmonie, Johanna Mallwitz" as the name:
 
@@ -151,7 +154,7 @@ The selected segments are  extracted from the audio file via `ffmepg` **without 
 
 **Fine-Tuning**: The voice at the beginning and end of the selected segments are removed using **Silero VAD**.
 
-For MP3s, the volume is normalized at the end using `mp3gain`.
+(For MP3s, the volume is normalized using `mp3gain`.)
 
 **Results:**
 
