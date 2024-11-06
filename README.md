@@ -2,142 +2,193 @@
 
 Music Extraction is a Python-based command line tool designed to extract the parts of an audio file that contain music only.
 
-**The basic idea is** that if a part of an audio file does not contain any speech (if there is no speech according to **Vosk speech recognition**), it must contain only music.
-
-Audio files are at first analyzed, then you can select the segments with no speech (= the segments with music!) and extract them. For extraction `ffmpeg` is used and so there will be **no re-encoding / quality loss**.
-
-Please note that this tool does not work perfect. The start and end the extracted music segments usually contain some spoken words (maximum 20 seconds of speech at the beginning and at the end).
+It uses **Vosk speech recognition** and **Silero VAD** (voice activity detector). 
 
 So far it has been tested for multiple audio formats including MP3, FLAC, and AAC.
 
 ## Description
 
-An audio file is analyzed in 20-second segments. Speech is searched for in the individual 20-second segments. Any speech found (transcription) is saved in the analysis (text) file that is created for each audio file (`.speech` extension).
-
-A 20-second segment without speech is regarded as a segment with music only.
+An audio file is analyzed in 20-second segments with the help of **Vosk Speech Recognition**. Speech is searched for in the individual 20-second segments. Any speech found (transcription) is saved in the analysis (text) file that is created for each audio file (`.speech` extension).
 
 The analysis of a one-hour audio file takes about 2 minutes.
 
-**Analysis Phase:**
+Execute the script with:
 ```bash
-    $ python3 ~/bin/music_extraction/music_extraction.py MyRadioRecording.mp3
-    Full analysis
-    Create analysable audio file...
-    Analysing audio segments... (Press Ctrl+C to interrupt)
-    0:00 nach zeitweise klare in der zweiten nacht hilfe von westen her schnee tiefstwerte null bis minus acht grad und die weiteren aussichten morgen erst schnee dann von westen her regen sonntag und montag weiter bewölkt und örtlich etwas schnee nächtliche tiefstwerte plus zwei bis minus zwei und tages höchstwerte null bis acht
-    0:20 hat soweit die nachricht dass es zwanzig uhr vier d r klassik konzerte abend herzlich willkommen dazu ich bin clemens nicole schön dass sie an diesem freitag abend mit dabei sind von neunzehnhundert einundsechzig bis neun
-    0:40 hunderte neunundsiebzig war rafael kugelig der tschechische schweizer oder der schweizerische tscheche chefdirigent beim sinfonieorchester des bayerischen rundfunks und danach noch bis neunzehnhundertdreiundachtzig ständiger gast dirigent dieses orchesters und aus dieser zeit stammen alle aufnahmen vom heute
-    1:00 die konzert abend hier auf bea klassik im programm unter anderem cube links kantate ohne worte er hat ja auch selbst komponiert und zum beispiel auch die lu die symphonie archie von jan no vag der hätte in diesen tagen seinen ein hundertsten geburtstag gefeiert wir beginnen aber mit einer
-    1:20 sinfonia von layer jana check anlass dieser komposition war der kongress eines sportvereins im jahr neunzehnhundertsechsundzwanzig da hatte man sich vor allem von fahren musik gewünscht das hat ja natürlich auch natürlich sofort eingelöst und deshalb sind die blechbläser in dieser sind von jette auch
-    1:40 sehr gut besetzt hören wir dass symphonie orchester des bayerischen rundfunks unter rafael kuby liegt in einer aufnahme aus dem jahr neunzehnhunderteinundachtzig
-    2:00 (of 116:03)...
-    3:00 (of 116:03)...
-    4:00 (of 116:03)...
-    5:00 (of 116:03)...
-    6:00 (of 116:03)...
-    7:00 (of 116:03)...
-    8:00 (of 116:03)...
-    9:00 (of 116:03)...
-    10:00 (of 116:03)...
-    11:00 (of 116:03)...
-    12:00 (of 116:03)...
-    13:00 (of 116:03)...
-    14:00 (of 116:03)...
-    15:00 (of 116:03)...
-    16:00 (of 116:03)...
-    17:00 (of 116:03)...
-    18:00 (of 116:03)...
-    19:00 (of 116:03)...
-    20:00 (of 116:03)...
-    21:00 (of 116:03)...
-    22:00 (of 116:03)...
-    23:00 (of 116:03)...
-    24:00 (of 116:03)...
-    25:00 applaus für die sinfonie etat von lausche jana check
-    25:20 denn aufnahme mit dem orchester des bayerischen rundfunks unter der leitung von rafael q beleg vom sechzehnte oktober neunzehnhunderteinundachtzig im münchner herkules saal der residenz gleich zwanzig dreißig hier es der konzert abend auf br klassik an diesem freitag abend und wir machen weiter mit aufnahmen
-    25:40 von sinfonieorchester des b rund rafael kugelig dem ehemaligen chefdirigenten und haben jetzt für sie eine fantasia konzertante eigentlich ein klavierkonzert in b dur von boshaft martino wir herrn als solistin die pianistin margaret weber
-    26:00 (of 116:03)...
-    27:00 (of 116:03)...
-    28:00 (of 116:03)...
-    29:00 (of 116:03)...
-    30:00 (of 116:03)...
-    ...
+$ python3 music_extraction.py <audio_file>
 ```
 
-Once the audio file has been analyzed, the music segments found are listed. The music segments found consist of several consecutive 20-second segments of the audio file.
-
-As a rule, a found music segment begins with a 20-second segment in which speech was found, followed by one or more 20-second segments in which no speech was found (i.e. which only contain music), and at the end there is another 20-second segment in which speech was found.
-**Explanation:** In the first segment in which speech was found, the speaker has usually stopped speaking at some point and the music has started. Since the beginning of the music should not be cut off, this segment must be included. As the music should not be cut off at the end either, the end of a found music segment must also be a 20-second segment in which speech was found. 
-
-It is quite possible that speech is found in a 20-second segment even though there is none (false positive), e.g. especially in music with vocals.
-
-The user can therefore combine several music segments after the analysis phase.
-
-**Selecting and Combining Found Music Segments:**
-```bash
-    Music segments:
-    1)
-    1:40 sehr gut besetzt hören wir dass symphonie orchester des bayerischen rundfunks unter rafael kuby liegt in einer aufnahme aus dem jahr neunzehnhunderteinundachtzig
-    25:20 applaus für die sinfonie etat von lausche jana check
-    23:40
-    
-    2)
-    25:40 von sinfonieorchester des b rund rafael kugelig dem ehemaligen chefdirigenten und haben jetzt für sie eine fantasia konzertante eigentlich ein klavierkonzert in b dur von boshaft martino wir herrn als solistin die pianistin margaret weber
-    48:00 die pianistin market weber zusammen mit dem symphonie orchester des bayerischen rundfunks unter der leitung von rafael kugelig mit der fantasia konzertante einem klavierkonzert in b dur von
-    22:20
-    
-    3)
-    49:00 melodien und motiven dieses werkes herausführen kann hier nochmal das sinfonieorchester des bayerischen rundfunks unter rafael q beleg mit tv schatz wassermann
-    53:40 die modetrends ressort mit wurde der nähe
-    4:40
-    
-    4)
-    53:20 die modetrends ressort mit wurde der nähe
-    65:40 der wassermann eine sinfonische dichtung von antonin war jacques in einer aufnahme mit dem symphonieorchester des bayerischen rundfunks unter seinem chefdirigenten beziehungsweise ehemaligen chefdirigenten rafael kugelig hier im konzert abend auf br
-    12:20
-    
-    Enter the segments to keep (e.g., 1,2-3,6) or press the Enter key to keep all: 1,2,3-4
-```
-
-The user can then assign a name for the music segments to be extracted and the music segments can be extracted without re-encoding/loss of quality:
+**Phase 1**: Analysis
 
 ```bash
-    Music segments:
-    1)
-    1:40 sehr gut besetzt hören wir dass symphonie orchester des bayerischen rundfunks unter rafael kuby liegt in einer aufnahme aus dem jahr neunzehnhunderteinundachtzig
-    25:20 applaus für die sinfonie etat von lausche jana check
-    23:40
-    
-    2)
-    25:40 von sinfonieorchester des b rund rafael kugelig dem ehemaligen chefdirigenten und haben jetzt für sie eine fantasia konzertante eigentlich ein klavierkonzert in b dur von boshaft martino wir herrn als solistin die pianistin margaret weber
-    48:00 die pianistin market weber zusammen mit dem symphonie orchester des bayerischen rundfunks unter der leitung von rafael kugelig mit der fantasia konzertante einem klavierkonzert in b dur von
-    22:20
-    
-    3)
-    49:00 melodien und motiven dieses werkes herausführen kann hier nochmal das sinfonieorchester des bayerischen rundfunks unter rafael q beleg mit tv schatz wassermann
-    65:40 der wassermann eine sinfonische dichtung von antonin war jacques in einer aufnahme mit dem symphonieorchester des bayerischen rundfunks unter seinem chefdirigenten beziehungsweise ehemaligen chefdirigenten rafael kugelig hier im konzert abend auf br
-    16:40
-    
-    Selected segments okay? (Y/n): 
-    Specify a name for the extraction segments or press the Enter key for default naming ("extraction"): BRSO+Kubelik
-    Exported 01_BRSO+Kubelik.mp3 from 1:40 to 25:20 (23:40)
-    Exported 02_BRSO+Kubelik.mp3 from 25:40 to 48:00 (22:20)
-    Exported 03_BRSO+Kubelik.mp3 from 49:00 to 65:40 (16:40)
+$ python3 music_extraction.py MyRadioRecording.mp3
+
+Full analysis
+Create analysable audio file...
+Analysing audio segments... (Press Ctrl+C to interrupt)
+0:00 bin grad unter mittwoch viel sonne zwölf bis neun zehn grad es ist elf uhr vier ndr kultur das konzert
+0:20 dazu begrüße heute rallye zar nikolaus schönen guten morgen von hildesheim und hannover aus in die welt die dirigenten johanna mai witz achtunddreißig jahre ist sie jung als chefin des konzerthauses berlin sorgt sie für viel aufsehen im herbst vergangenen jahres gastierte sie zum ersten mal beim ndr
+0:40 die philharmonie orchester und war auch im gespräch zu erleben bei uns da sagte sie ein gutes programm ist eine mischung aus dramaturgisch umdenken und bauchgefühl wenn es gut geht entsteht ein flow auf der bühne wie im publikum dieser flow entstand mit rachmaninow legendärem drittem
+1:00 wir konzert mit anna wie netz karriere im zentrum und was packt man zu diesem mount everest der klavierkonzert literatur das wollte natürlich gut überlegt sein sagt johanna mal witz und hat sich für zwei werke von sultan corday als rahmen entschieden sultan wer werden sich leid
+1:20 einige fragen und daher es genau möchte die dirigentin mit dem ndr elbphilharmonie orchester ändern ihre leidenschaft für diese musik weitergeben mit der haare janosch street einer märchen erzählung zum abschluss und mit den tänzen aus galant h zu begehen wir erfahren nachher was in uns
+1:40 jahren ein niesen vor beginn einer erzählung bedeutet erlernen johanna mal witz näher kennen im gespräch mit stefan sturm und wir erfahren was für sie hollywood für symphonieorchester bedeutet jetzt die tänze aus galanter von sultan corday ein gutes beispiel für seine klang sprache neunzehnhundertdreiunddreißig
+2:00 ich entstanden in erinnerung an seine kindheit im vorwort zur partitur schreibt er galanter ist ein kleiner ungarischer marktflecken an der alten bahnstrecke wien budapest sieben jahre hatte dort verbracht als kind und die auftritte der dortigen musiker beeindruckten in
+2:20 tief in seinen tänzen werden wir hin und her geworfen zwischen melancholie und humor die kontraste charakterisieren diese musik das nr älpler orchester spielt unter leitung von johanna mal letz
+3:00 (of 116:02)...
+4:00 (of 116:02)...
+5:00 (of 116:02)...
+6:00 (of 116:02)...
+7:00 (of 116:02)...
+8:00 (of 116:02)...
+9:00 (of 116:02)...
+10:00 (of 116:02)...
+11:00 (of 116:02)...
+12:00 (of 116:02)...
+13:00 (of 116:02)...
+14:00 (of 116:02)...
+15:00 (of 116:02)...
+16:00 (of 116:02)...
+17:00 (of 116:02)...
+18:00 (of 116:02)...
+19:00 die tänze aus galanter von sultan corday der um jubelte einstand der dirigentin johanna mal witz beim ndr elbphilharmonie orchester am ersten oktober zweitausenddrei und
+19:20 ich im großen saal der elbphilharmonie in hamburg solistin wadi pianistin anna wie netz ca ja sie hat aus anlass des hundert fünfzigsten geburtstag ihres landsmanns rachmaninow im vergangenen jahr alle vier konzerte gespielt mit dem ndr elf harmonie orchester am ersten oktober war das dritte dran
+19:40 und johanna mal witz spricht beim rasch drei von einem der monströsesten klavierkonzerte die es überhaupt gibt das spielen zu können sei schon viel aber anna wie netz kein schaffe es bei allem noch eine leichtigkeit und eine natürlichkeit und eine gesang lichkeit zu haben bei diesem
+20:00 mount everest unter den klavierkonzerten und sie weist daraufhin dass das konzert sehr symphonisch komponiert ist der solo part sehr verwoben mit dem orchester da passiert unheimlich viel unterschiedliches mit sehr viel material auch für das orchester sei es eine herausforderung falls
+20:20 denn nicht nur begleitet und anna wie netz geier natürlich fire braucht man ganz viel energie bei solche konzerte vor allem weil es einfach schon am zeitliche liegenden geht das als ist es dann nicht normalerweise man gewöhnt sich am dreißig fünfunddreißig minuten da muss man hier lenker spiel
+20:40 aber ich würde sagen so viele noten die da komponiert hat sie gar nicht so wichtig also diesen oft sehr atmosphärisch oft nur für die farbe da und das große melodie linie muss man natürlich behalten mit sinken mitfühlen und dann ist es ja
+21:00 da eigentlich mans spürt dieser ganz im norden nicht sie sind einfach dafür da die melodien zu helfen sergei rachmaninow hat auf der überfahrt nach new york stumm geübt ohne klavier geht das überhaupt so ein konzerts stumm zu üben mit meiner war so daten recht dass die ganz erreicht
+21:20 dessen vielen gewahren als heutzutage er hat immer nicht nur für drittes reich meine wach hat immer seine stumme klaviatur mit sich grabt um zu üben weil die am anfang an seine karriere seinem technik war nicht so gut ausgeprägt ihm hat es nicht so gut gefallen oder technische fähigkeiten
+21:40 weil bei ihm war nicht so perfekt fahrende er und an hat er angefangen sich zu verbessern technisch und deswegen diese ganze stimme klaviatur und dass er dann wie verrückter in einer so zeit wo er ziemlich jungfer geübt hat und die ergebnisse kann man sich bis heute anhören was die interpretation angeht kann man sich auf man
+22:00 und selbst berufen der hat alle konzerte aufgenommen und dass es für mich vorbild wie man rasch meiner spielen muss natürlich ich kapieren dass es auch unmöglich sein art seine interpretationen zu kopieren aber man spürt wenn man seine aufnahme ich ort in welche richtung er geht also mein sein
+22:20 die musik das eigentlich diese ganz er rabatt hier und auch die tempel unterschiede sind kaum zu merken seine musik ist im rahmen der so ziemlich rhythmisch aber in diese rahmen basiert soviel drosseln an sich dass es säße klassisch komponiert anna wie netz geier unter
+22:40 des ndr elbphilharmonie orchester spielen unter leitung von johanna mal witz das klavierkonzert nummer drei von das hergé rachmaninow es steht in d moll und die besteigung des mount everest beginnt mit einer denkbar schlichten melodie
+23:00 (of 116:02)...
+24:00 (of 116:02)...
+25:00 (of 116:02)...
+26:00 (of 116:02)...
+27:00 (of 116:02)...
+...
 ```
 
+**Phase 2**: The results are presented to the user on the console. The user can combine and select segments.
 
+```bash
+Music segments:
+1)
+2:20 tief in seinen tänzen werden wir hin und her geworfen zwischen melancholie und humor die kontraste charakterisieren diese musik das nr älpler orchester spielt unter leitung von johanna mal letz
+19:20 die tänze aus galanter von sultan corday der um jubelte einstand der dirigentin johanna mal witz beim ndr elbphilharmonie orchester am ersten oktober zweitausenddrei und
+17:00
 
+2)
+22:40 des ndr elbphilharmonie orchester spielen unter leitung von johanna mal witz das klavierkonzert nummer drei von das hergé rachmaninow es steht in d moll und die besteigung des mount everest beginnt mit einer denkbar schlichten melodie
+63:20 analytiker und das ndr elbphilharmonie orchester dirigiert von johanna mal witz mit dem klavierkonzert nummer drei d moll von fake fachmann noch sie hören das konzert auf ndr kultur heute eine aufnahme aus der elbphilharmonie in hamburg vom er
+40:40
 
+3)
+63:40 du gabe aus den e typ tableau opus neununddreißig von rachmaninow das fünfte in es moll
+69:00 die zugabe von einer wie netz geier in der hamburger elbphilharmonie am ersten oktober zweitausend dreiundzwanzig e typ tableau es neue von säge rachmaninow auf aus seinem opus neununddreißig johanna mal witz ist eine viel beachtete dirigent
+5:20
 
+4)
+77:40 dusche seine wahre natur ist nachdenklich gehören die haare janosch suite von sollte an call a in der aufnahme vom ersten oktober vergangenen jahres in der elbphilharmonie johanna mal witz am puls des ndr elbphilharmonie orchesters
+102:20 das war die haare janus fühlt von sollten corday gespielt vom ende her elbphilharmonie orchester unter der leitung von johanna mal wilds eine aufnahme vom ersten oktober zweitausenddrei uns fand sich hier auf ndr kultur im konzert und
+24:40
 
+5)
+102:40 das begleitet von jenny yang jun grau mit dem ersten satz der r p g ohne sonate von franz schubert
+111:00 der erste satz der betone sonate von franz schubert mit christopher franziskus und jäh nie ja nun gar o meiner mistral liter nikolaus ich wünsche ihnen noch einen sehr schönen sonntag mit brahms
+8:20
+
+6)
+110:40 der erste satz der betone sonate von franz schubert mit christopher franziskus und jäh nie ja nun gar o meiner mistral liter nikolaus ich wünsche ihnen noch einen sehr schönen sonntag mit brahms
+116:02.233 ...
+5:22.233
+
+Enter the segments to keep (e.g., 1,2-3,6) or press the Enter key to keep all: 
+```
+Several of these segments can be combined. This is useful because some pieces of music also contain speech (e.g. opera arias) and because Vosk Speech Recognition sometimes incorrectly detects speech (false positives).
+
+**Phase 3**: Extraction & Fine-Tuning
+
+After the user set the name for extractions, the script will extract the segments and do fine-tuning and, if the audio file is MP3, execute `mp3gain`.
+
+Here I entered "Konzert Vinnitskaya, NDR Elbphilharmonie, Johanna Mallwitz" as the name:
+
+```bash
+Selected segments okay? (Y/n): Y
+Specify a name for the extraction segments or press the Enter key for default naming ("extraction"): Konzert Vinnitskaya, NDR Elbphilharmonie, Johanna Mallwitz
+Exported 01_Konzert Vinnitskaya, NDR Elbphilharmonie, Johanna Mallwitz.mp3 from ~2:20 to ~19:20 (16:33.949)
+01_Konzert Vinnitskaya, NDR Elbphilharmonie, Johanna Mallwitz.mp3
+Applying mp3 gain change of 4 to 01_Konzert Vinnitskaya, NDR Elbphilharmonie, Johanna Mallwitz.mp3...
+01_Konzert Vinnitskaya, NDR Elbphilharmonie, Johanna Mallwitz_with_speech.mp3
+Applying mp3 gain change of 4 to 01_Konzert Vinnitskaya, NDR Elbphilharmonie, Johanna Mallwitz_with_speech.mp3...
+Exported 02_Konzert Vinnitskaya, NDR Elbphilharmonie, Johanna Mallwitz.mp3 from ~22:40 to ~63:20 (40:06.932)
+02_Konzert Vinnitskaya, NDR Elbphilharmonie, Johanna Mallwitz.mp3
+Applying mp3 gain change of 4 to 02_Konzert Vinnitskaya, NDR Elbphilharmonie, Johanna Mallwitz.mp3...
+02_Konzert Vinnitskaya, NDR Elbphilharmonie, Johanna Mallwitz_with_speech.mp3
+Applying mp3 gain change of 4 to 02_Konzert Vinnitskaya, NDR Elbphilharmonie, Johanna Mallwitz_with_speech.mp3...
+Exported 03_Konzert Vinnitskaya, NDR Elbphilharmonie, Johanna Mallwitz.mp3 from ~63:40 to ~69:00 (4:54.138)
+03_Konzert Vinnitskaya, NDR Elbphilharmonie, Johanna Mallwitz.mp3
+Applying mp3 gain change of 4 to 03_Konzert Vinnitskaya, NDR Elbphilharmonie, Johanna Mallwitz.mp3...
+03_Konzert Vinnitskaya, NDR Elbphilharmonie, Johanna Mallwitz_with_speech.mp3
+Applying mp3 gain change of 4 to 03_Konzert Vinnitskaya, NDR Elbphilharmonie, Johanna Mallwitz_with_speech.mp3...
+Exported 04_Konzert Vinnitskaya, NDR Elbphilharmonie, Johanna Mallwitz.mp3 from ~77:40 to ~102:20 (24:06.836)
+04_Konzert Vinnitskaya, NDR Elbphilharmonie, Johanna Mallwitz.mp3
+Applying mp3 gain change of 4 to 04_Konzert Vinnitskaya, NDR Elbphilharmonie, Johanna Mallwitz.mp3...
+04_Konzert Vinnitskaya, NDR Elbphilharmonie, Johanna Mallwitz_with_speech.mp3
+Applying mp3 gain change of 4 to 04_Konzert Vinnitskaya, NDR Elbphilharmonie, Johanna Mallwitz_with_speech.mp3...
+Exported 05_Konzert Vinnitskaya, NDR Elbphilharmonie, Johanna Mallwitz.mp3 from ~102:40 to ~111:00 (7:51.364)
+05_Konzert Vinnitskaya, NDR Elbphilharmonie, Johanna Mallwitz.mp3
+Applying mp3 gain change of 5 to 05_Konzert Vinnitskaya, NDR Elbphilharmonie, Johanna Mallwitz.mp3...
+05_Konzert Vinnitskaya, NDR Elbphilharmonie, Johanna Mallwitz_with_speech.mp3
+Applying mp3 gain change of 4 to 05_Konzert Vinnitskaya, NDR Elbphilharmonie, Johanna Mallwitz_with_speech.mp3...
+Exported 06_Konzert Vinnitskaya, NDR Elbphilharmonie, Johanna Mallwitz.mp3 from ~110:40 to ~116:02.233 (5:04.917)
+06_Konzert Vinnitskaya, NDR Elbphilharmonie, Johanna Mallwitz.mp3
+Applying mp3 gain change of 3 to 06_Konzert Vinnitskaya, NDR Elbphilharmonie, Johanna Mallwitz.mp3...
+06_Konzert Vinnitskaya, NDR Elbphilharmonie, Johanna Mallwitz_with_speech.mp3
+Applying mp3 gain change of 3 to 06_Konzert Vinnitskaya, NDR Elbphilharmonie, Johanna Mallwitz_with_speech.mp3...
+```
+The selected segments are  extracted from the audio file via `ffmepg` **without re-encoding/loss of quality**!
+
+**Fine-Tuning**: The voice at the beginning and end of the selected segments are removed using **Silero VAD**.
+
+For MP3s, the volume is normalized at the end using `mp3gain`.
+
+**Results:**
+
+```bash
+$ ls -lha
+
+total 703M
+drwxrwxr-x  2 thees thees 4,0K Nov  6 12:25  .
+drwxrwxr-x 13 thees thees 4,0K Okt 29 09:02  ..
+-rw-rw-r--  1 thees thees  28M Nov  6 12:24 '01_Konzert Vinnitskaya, NDR Elbphilharmonie, Johanna Mallwitz.mp3'
+-rw-rw-r--  1 thees thees  29M Nov  6 12:24 '01_Konzert Vinnitskaya, NDR Elbphilharmonie, Johanna Mallwitz_with_speech.mp3'
+-rw-rw-r--  1 thees thees  66M Nov  6 12:24 '02_Konzert Vinnitskaya, NDR Elbphilharmonie, Johanna Mallwitz.mp3'
+-rw-rw-r--  1 thees thees  67M Nov  6 12:24 '02_Konzert Vinnitskaya, NDR Elbphilharmonie, Johanna Mallwitz_with_speech.mp3'
+-rw-rw-r--  1 thees thees 8,0M Nov  6 12:24 '03_Konzert Vinnitskaya, NDR Elbphilharmonie, Johanna Mallwitz.mp3'
+-rw-rw-r--  1 thees thees 8,6M Nov  6 12:24 '03_Konzert Vinnitskaya, NDR Elbphilharmonie, Johanna Mallwitz_with_speech.mp3'
+-rw-rw-r--  1 thees thees  41M Nov  6 12:24 '04_Konzert Vinnitskaya, NDR Elbphilharmonie, Johanna Mallwitz.mp3'
+-rw-rw-r--  1 thees thees  41M Nov  6 12:24 '04_Konzert Vinnitskaya, NDR Elbphilharmonie, Johanna Mallwitz_with_speech.mp3'
+-rw-rw-r--  1 thees thees  13M Nov  6 12:24 '05_Konzert Vinnitskaya, NDR Elbphilharmonie, Johanna Mallwitz.mp3'
+-rw-rw-r--  1 thees thees  14M Nov  6 12:24 '05_Konzert Vinnitskaya, NDR Elbphilharmonie, Johanna Mallwitz_with_speech.mp3'
+-rw-rw-r--  1 thees thees 8,1M Nov  6 12:25 '06_Konzert Vinnitskaya, NDR Elbphilharmonie, Johanna Mallwitz.mp3'
+-rw-rw-r--  1 thees thees 8,4M Nov  6 12:25 '06_Konzert Vinnitskaya, NDR Elbphilharmonie, Johanna Mallwitz_with_speech.mp3'
+-rw-rw-r--  1 thees thees 188M Nov  6 12:10  MyRadioRecording.mp3
+-rw-rw-r--  1 thees thees  16K Nov  6 12:15  MyRadioRecording.speech
+```
+
+ The .speech file (here MyRadioRecording.speech) contains the audio analysis. It can be reuse for later re-extractions.
+
+**The new audio files are the results of the extraction process.** They are numbered. For each file a file that ends with "_with_speech" exists. That are the extracted files without fine-tuning. They usually contain speech at the beginning and at the end. Sometimes it is necessary to have them and therefore they are not deleted. 
 
 
 ## Installation
 
 ### Prerequisites
 
-- Python 3.7 or higher
-- FFmpeg installed on your system (required for audio processing)
+- Python 3.12 or higher
+- `ffmpeg` installed on your system (required for audio processing)
+- `mp3gain` in case you want to extract from MP3s
 
 ### Setup
 
@@ -162,7 +213,6 @@ The user can then assign a name for the music segments to be extracted and the m
    ```
 
 4. **Download and Setup Speech Model**
-
  
    * Download a speech model that is compatible with Vosk-API (source is https://alphacephei.com/vosk/models)
      * You should download a **small** model for better speed (e.g. `vosk-model-small-de-0.15` for German)!
@@ -175,19 +225,14 @@ The user can then assign a name for the music segments to be extracted and the m
 To analyze an audio file and extract music segments, run the following command:
 
    ```bash
-   python3 music_extraction.py <audio_file> [-a|--analyse]
+   python3 music_extraction.py <audio_file> [-a|--analyse] [-b LESS_SILENCE_BEGINNING] [-e LESS_SILENCE_END] [-h]
    ```
 * <audio_file>: Path to the audio file to be analyzed.
 
-* -a or --analyse: Optional flag to perform analysis only, without extracting segments.
-
-
-#### Example
-
-   ```bash
-   python3 music_extraction.py test.mp3
-   ```
-Follow the on-screen prompts to select segments for extraction and specify names for the output files.
+* -a or --analyse: Flag to perform analysis only, without extracting segments. Creates the .speech file only.
+* -b LESS_SILENCE_BEGINNING Less silence at the beginning of the trimmed audio file in seconds
+* -e LESS_SILENCE_END Less silence at the end of the trimmed audio file in seconds
+* -h, --help shows help message and exit
 
 
 ### License
@@ -197,4 +242,6 @@ This project is licensed under the MIT License. See the LICENSE file for details
 ### Acknowledgments
 
 * **Vosk Speech Recognition**: This project uses the Vosk library, licensed under the Apache License 2.0. See the LICENSE-APACHE file for details.
+* **Silero VAD**: MIT license
 * Special thanks to the contributors of the open-source libraries and tools that made this project possible.
+ 
