@@ -1,3 +1,4 @@
+import tempfile
 from pathlib import Path
 import torch, torchaudio, numpy
 from audio_tools import get_total_length_of_audio, split_audio, create_analysable_audio
@@ -61,9 +62,9 @@ class AudioTrimmer:
         # reset trimmed_length
         self._trimmed_length = 0.0
         tmp_wav_path = None
-        try:
-            # tmp_wav_path = copy_to_tmp_wav(self._audio_path)
-            tmp_wav_path = create_analysable_audio(self._audio_path, wav_name= "tmp_" + self._audio_path.stem + ".wav")
+
+        with tempfile.TemporaryDirectory() as temp_dir:
+            tmp_wav_path = create_analysable_audio(temp_dir, self._audio_path, wav_name= "tmp_" + self._audio_path.stem + ".wav")
             total_duration = get_total_length_of_audio(tmp_wav_path)
             if total_duration < self._to_be_analysed_segment_length:
                 print(f"Length of {self._audio_path} is smaller than {self._to_be_analysed_segment_length} seconds.")
@@ -72,9 +73,6 @@ class AudioTrimmer:
             begin = self._find_begin(tmp_wav_path)
             end = self._find_end(tmp_wav_path, total_duration)
             self._trimmed_length = end - begin
-        finally:
-            if tmp_wav_path and tmp_wav_path.exists():
-                tmp_wav_path.unlink()
 
         file_name = self._audio_path.stem
         suffix = self._audio_path.suffix

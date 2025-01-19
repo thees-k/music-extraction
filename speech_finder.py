@@ -1,6 +1,7 @@
 import os
 import signal
 import sys
+import tempfile
 from enum import Enum
 from pathlib import Path
 from audio_tools import extract_segment, create_analysable_audio, get_total_length_of_audio
@@ -81,63 +82,63 @@ class SpeechFinder:
         Args:
             old_lines (tuple, optional): Existing lines from a previous analysis. Defaults to ().
         """
-        print("Create analysable audio file...")
-        analysable_audio_path = create_analysable_audio(self._audio_path)
-
-        segment_analyser = AudioSegmentAnalyser()
-        total_length_display = seconds_to_min_sec(int(self._total_length))
-        if old_lines:
-            start_time, old_lines = int(old_lines[-1]), old_lines[:-1]
-            print(f"Continue analysing audio segments... (Press Ctrl+C to interrupt)")
-            if not self.needs_print(start_time):
-                print(f"{seconds_to_min_sec(start_time)} (of {total_length_display})...")
-        else:
-            print("Analysing audio segments... (Press Ctrl+C to interrupt)")
-            start_time = 0
-
-        self._interrupt = False  # Reset interrupt flag before starting analysis
-        signal.signal(signal.SIGINT, self._signal_handler)
-
-        with open(self._analyze_file_path, "w") as file:
+        with tempfile.TemporaryDirectory() as temp_dir:
+            print("Create analysable audio file...")
+            analysable_audio_path = create_analysable_audio(temp_dir, self._audio_path)
+            segment_analyser = AudioSegmentAnalyser()
+            total_length_display = seconds_to_min_sec(int(self._total_length))
             if old_lines:
-                for old_line in old_lines:
-                    file.write(old_line + "\n")
+                start_time, old_lines = int(old_lines[-1]), old_lines[:-1]
+                print(f"Continue analysing audio segments... (Press Ctrl+C to interrupt)")
+                if not self.needs_print(start_time):
+                    print(f"{seconds_to_min_sec(start_time)} (of {total_length_display})...")
             else:
-                file.write(f"{self.SEGMENT_LENGTH_SEC}\n")
+                print("Analysing audio segments... (Press Ctrl+C to interrupt)")
+                start_time = 0
 
-            while start_time < self._total_length:
-                end_time = start_time + self.SEGMENT_LENGTH_SEC
-                if end_time > self._total_length:
-                    end_time = self._total_length
+            self._interrupt = False  # Reset interrupt flag before starting analysis
+            signal.signal(signal.SIGINT, self._signal_handler)
 
-                try:
-                    segment_path = extract_segment(analysable_audio_path, start_time, self.SEGMENT_LENGTH_SEC,
-                                                   segment_name=f"tmp_segment_{start_time}.wav")
-                    speech_segment = segment_analyser.get_speech(segment_path)
-                    if speech_segment:
-                        line = f"{start_time} {speech_segment}"
-                        file.write(line + "\n")
-                        print(f"{seconds_to_min_sec(start_time)} {speech_segment}")
-                    elif self.needs_print(start_time):
-                        print(f"{seconds_to_min_sec(start_time)} (of {total_length_display})...")
-                finally:
-                    if os.path.exists(segment_path):
-                        os.remove(segment_path)
+            with open(self._analyze_file_path, "w") as file:
+                if old_lines:
+                    for old_line in old_lines:
+                        file.write(old_line + "\n")
+                else:
+                    file.write(f"{self.SEGMENT_LENGTH_SEC}\n")
 
-                start_time = end_time
+                while start_time < self._total_length:
+                    end_time = start_time + self.SEGMENT_LENGTH_SEC
+                    if end_time > self._total_length:
+                        end_time = self._total_length
 
-                if self._interrupt and end_time < self._total_length:
-                    file.write(f"{end_time}\n")
-                    print(f"User interrupted analysis at {seconds_to_min_sec(end_time)}.")
-                    break
-            else:
-                file.write(f"end\n")
+                    try:
+                        segment_path = extract_segment(analysable_audio_path, start_time, self.SEGMENT_LENGTH_SEC,
+                                                       segment_name=f"tmp_segment_{start_time}.wav")
+                        speech_segment = segment_analyser.get_speech(segment_path)
+                        if speech_segment:
+                            line = f"{start_time} {speech_segment}"
+                            file.write(line + "\n")
+                            print(f"{seconds_to_min_sec(start_time)} {speech_segment}")
+                        elif self.needs_print(start_time):
+                            print(f"{seconds_to_min_sec(start_time)} (of {total_length_display})...")
+                    finally:
+                        if os.path.exists(segment_path):
+                            os.remove(segment_path)
 
-        signal.signal(signal.SIGINT, signal.SIG_DFL)
+                    start_time = end_time
 
-        if os.path.exists(analysable_audio_path):
-            print("Cleanup analysable audio file")
-            os.remove(analysable_audio_path)
+                    if self._interrupt and end_time < self._total_length:
+                        file.write(f"{end_time}\n")
+                        print(f"User interrupted analysis at {seconds_to_min_sec(end_time)}.")
+                        break
+                else:
+                    file.write(f"end\n")
+
+            signal.signal(signal.SIGINT, signal.SIG_DFL)
+
+            # if os.path.exists(analysable_audio_path):
+            #     print("Cleanup analysable audio file")
+            #     os.remove(analysable_audio_path)
 
     @staticmethod
     def needs_print(start_time):

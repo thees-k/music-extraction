@@ -1,4 +1,5 @@
 import logging
+import os
 import subprocess
 from pathlib import Path
 from pydub import AudioSegment
@@ -14,7 +15,7 @@ def extract_segment(wav_path: Path, start_time: int, duration: int, segment_name
         duration (int): Duration of the segment in seconds.
         segment_name (str): The output segment file.
     """
-    segment_path = Path(segment_name)
+    segment_path = wav_path.parent / segment_name
     command = f'ffmpeg -loglevel error -ss {start_time} -t {duration} -i "{wav_path}" "{segment_path}"'
     result = subprocess.call(command, shell=True)
     if result != 0:
@@ -23,8 +24,8 @@ def extract_segment(wav_path: Path, start_time: int, duration: int, segment_name
     return segment_path
 
 
-def create_analysable_audio(audio_path: Path, wav_name="temp_audio.wav"):
-    wav_path = Path(wav_name)
+def create_analysable_audio(temp_dir: str, audio_path: Path, wav_name="temp_audio.wav") -> Path:
+    wav_path = Path(os.path.join(temp_dir, wav_name))
     try:
         audio = AudioSegment.from_file(audio_path)
         audio = audio.set_frame_rate(16000).set_channels(1)
