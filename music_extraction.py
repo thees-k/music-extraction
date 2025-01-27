@@ -108,6 +108,10 @@ def init_argument_parser() -> Namespace:
     parser.add_argument('-a', '--analyse', action='store_true',
                         help='If set, the audio file will be analysed only (for later faster extraction)')
 
+    # Another option without argument (a flag!):
+    parser.add_argument('-s', '--silent', action='store_true',
+                        help='If set, there will be not output on console during analyzing phase')
+
     parser.add_argument('-b', '--less_silence_beginning', type=float,
                         default=DEFAULT_LESS_SILENCE_SECONDS,
                         help='Less silence at the beginning of the trimmed audio file in seconds')
@@ -152,7 +156,7 @@ def main():
         print("The value for -e/--less_silence_end must not be negative.")
         sys.exit(1)
 
-    lines, total_length = SpeechFinder(audio_path).find_segments()
+    lines, total_length = SpeechFinder(audio_path, args.silent).find_segments()
 
     if not args.analyse:
         segments = find_music_segments(lines, total_length)

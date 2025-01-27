@@ -3,6 +3,7 @@ import os
 import subprocess
 from pathlib import Path
 from pydub import AudioSegment
+import shutil
 
 
 def extract_segment(wav_path: Path, start_time: int, duration: int, segment_name="temp_segment.wav"):
@@ -27,13 +28,26 @@ def extract_segment(wav_path: Path, start_time: int, duration: int, segment_name
 def create_analysable_audio(temp_dir: str, audio_path: Path, wav_name="temp_audio.wav") -> Path:
     wav_path = Path(os.path.join(temp_dir, wav_name))
     try:
+        # Load the audio file
         audio = AudioSegment.from_file(audio_path)
-        audio = audio.set_frame_rate(16000).set_channels(1)
-        audio.export(wav_path, format="wav")
-        logging.info(f"Converted {audio_path} to {wav_path}")
+
+        # Check if the audio is already a mono WAV with frame rate 16000
+        if (
+            audio.frame_rate == 16000 and
+            audio.channels == 1 and
+            audio_path.suffix.lower() == ".wav"
+        ):
+            # Copy the file directly
+            shutil.copy(audio_path, wav_path)
+            logging.info(f"Copied {audio_path} to {wav_path} as it already meets the requirements.")
+        else:
+            # Convert the audio to mono WAV with frame rate 16000
+            audio = audio.set_frame_rate(16000).set_channels(1)
+            audio.export(wav_path, format="wav")
+            logging.info(f"Converted {audio_path} to {wav_path}")
     except Exception as e:
-        logging.error(f"Failed to convert {audio_path} to {wav_path}: {e}")
-        raise RuntimeError(f"Conversion to WAV failed for {audio_path}")
+        logging.error(f"Failed to process {audio_path}: {e}")
+        raise RuntimeError(f"Failed to process {audio_path}")
 
     return wav_path
 

@@ -43,7 +43,7 @@ class SpeechFinder:
 
     SEGMENT_LENGTH_SEC = 20
 
-    def __init__(self, audio_path: str):
+    def __init__(self, audio_path: str, silent_operation=False):
         """
         Initialize the SpeechFinder with the given audio file path.
 
@@ -54,6 +54,7 @@ class SpeechFinder:
         self._analyze_file_path = str(self._audio_path.with_suffix('.speech'))
         self._interrupt = False
         self._total_length = 0.0
+        self._silent_operation = silent_operation
         SetLogLevel(-1)
 
     def find_segments(self):
@@ -63,11 +64,13 @@ class SpeechFinder:
         if necessary_analysis == NecessaryAnalysis.NOT_NECESSARY:
             pass
         elif necessary_analysis == NecessaryAnalysis.FULLY:
-            print("Full analysis")
+            if not self._silent_operation:
+                print("Full analysis")
             self._delete_analysis_file_if_exists()
             self._do_analysis()
         elif necessary_analysis == NecessaryAnalysis.CONTINUE:
-            print("Continuing the analysis")
+            if not self._silent_operation:
+                print("Continuing the analysis")
             lines = self._load_lines_of_analysis_file()
             self._do_analysis(lines)
         else:
@@ -83,17 +86,20 @@ class SpeechFinder:
             old_lines (tuple, optional): Existing lines from a previous analysis. Defaults to ().
         """
         with tempfile.TemporaryDirectory() as temp_dir:
-            print("Create analysable audio file...")
+            if not self._silent_operation:
+                print("Create analysable audio file...")
             analysable_audio_path = create_analysable_audio(temp_dir, self._audio_path)
             segment_analyser = AudioSegmentAnalyser()
             total_length_display = seconds_to_min_sec(int(self._total_length))
             if old_lines:
                 start_time, old_lines = int(old_lines[-1]), old_lines[:-1]
-                print(f"Continue analysing audio segments... (Press Ctrl+C to interrupt)")
-                if not self.needs_print(start_time):
+                if not self._silent_operation:
+                    print(f"Continue analysing audio segments... (Press Ctrl+C to interrupt)")
+                if not self.needs_print(start_time) and not self._silent_operation:
                     print(f"{seconds_to_min_sec(start_time)} (of {total_length_display})...")
             else:
-                print("Analysing audio segments... (Press Ctrl+C to interrupt)")
+                if not self._silent_operation:
+                    print("Analysing audio segments... (Press Ctrl+C to interrupt)")
                 start_time = 0
 
             self._interrupt = False  # Reset interrupt flag before starting analysis
@@ -118,9 +124,11 @@ class SpeechFinder:
                         if speech_segment:
                             line = f"{start_time} {speech_segment}"
                             file.write(line + "\n")
-                            print(f"{seconds_to_min_sec(start_time)} {speech_segment}")
+                            if not self._silent_operation:
+                                print(f"{seconds_to_min_sec(start_time)} {speech_segment}")
                         elif self.needs_print(start_time):
-                            print(f"{seconds_to_min_sec(start_time)} (of {total_length_display})...")
+                            if not self._silent_operation:
+                                print(f"{seconds_to_min_sec(start_time)} (of {total_length_display})...")
                     finally:
                         if os.path.exists(segment_path):
                             os.remove(segment_path)
@@ -129,7 +137,8 @@ class SpeechFinder:
 
                     if self._interrupt and end_time < self._total_length:
                         file.write(f"{end_time}\n")
-                        print(f"User interrupted analysis at {seconds_to_min_sec(end_time)}.")
+                        if not self._silent_operation:
+                            print(f"User interrupted analysis at {seconds_to_min_sec(end_time)}.")
                         break
                 else:
                     file.write(f"end\n")
