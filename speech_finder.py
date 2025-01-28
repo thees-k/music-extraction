@@ -64,13 +64,11 @@ class SpeechFinder:
         if necessary_analysis == NecessaryAnalysis.NOT_NECESSARY:
             pass
         elif necessary_analysis == NecessaryAnalysis.FULLY:
-            if not self._silent_operation:
-                print("Full analysis")
+            self.inform("Full analysis")
             self._delete_analysis_file_if_exists()
             self._do_analysis()
         elif necessary_analysis == NecessaryAnalysis.CONTINUE:
-            if not self._silent_operation:
-                print("Continuing the analysis")
+            self.inform("Continuing the analysis")
             lines = self._load_lines_of_analysis_file()
             self._do_analysis(lines)
         else:
@@ -86,20 +84,17 @@ class SpeechFinder:
             old_lines (tuple, optional): Existing lines from a previous analysis. Defaults to ().
         """
         with tempfile.TemporaryDirectory() as temp_dir:
-            if not self._silent_operation:
-                print("Create analysable audio file...")
+            self.inform("Create analysable audio file...")
             analysable_audio_path = create_analysable_audio(temp_dir, self._audio_path)
             segment_analyser = AudioSegmentAnalyser()
             total_length_display = seconds_to_min_sec(int(self._total_length))
             if old_lines:
                 start_time, old_lines = int(old_lines[-1]), old_lines[:-1]
-                if not self._silent_operation:
-                    print(f"Continue analysing audio segments... (Press Ctrl+C to interrupt)")
-                if not self.needs_print(start_time) and not self._silent_operation:
-                    print(f"{seconds_to_min_sec(start_time)} (of {total_length_display})...")
+                self.inform(f"Continue analysing audio segments... (Press Ctrl+C to interrupt)")
+                if not self.needs_print(start_time):
+                    self.inform(f"{seconds_to_min_sec(start_time)} (of {total_length_display})...")
             else:
-                if not self._silent_operation:
-                    print("Analysing audio segments... (Press Ctrl+C to interrupt)")
+                self.inform("Analysing audio segments... (Press Ctrl+C to interrupt)")
                 start_time = 0
 
             self._interrupt = False  # Reset interrupt flag before starting analysis
@@ -124,11 +119,9 @@ class SpeechFinder:
                         if speech_segment:
                             line = f"{start_time} {speech_segment}"
                             file.write(line + "\n")
-                            if not self._silent_operation:
-                                print(f"{seconds_to_min_sec(start_time)} {speech_segment}")
+                            self.inform(f"{seconds_to_min_sec(start_time)} {speech_segment}")
                         elif self.needs_print(start_time):
-                            if not self._silent_operation:
-                                print(f"{seconds_to_min_sec(start_time)} (of {total_length_display})...")
+                            self.inform(f"{seconds_to_min_sec(start_time)} (of {total_length_display})...")
                     finally:
                         if os.path.exists(segment_path):
                             os.remove(segment_path)
@@ -137,17 +130,13 @@ class SpeechFinder:
 
                     if self._interrupt and end_time < self._total_length:
                         file.write(f"{end_time}\n")
-                        if not self._silent_operation:
-                            print(f"User interrupted analysis at {seconds_to_min_sec(end_time)}.")
+                        print(f"User interrupted analysis at {seconds_to_min_sec(end_time)}.")
                         break
                 else:
                     file.write(f"end\n")
 
             signal.signal(signal.SIGINT, signal.SIG_DFL)
 
-            # if os.path.exists(analysable_audio_path):
-            #     print("Cleanup analysable audio file")
-            #     os.remove(analysable_audio_path)
 
     @staticmethod
     def needs_print(start_time):
@@ -229,6 +218,10 @@ class SpeechFinder:
             frame (FrameType): The current stack frame.
         """
         self._interrupt = True
+
+    def inform(self, message: str):
+        if not self._silent_operation:
+            print(message)
 
 
 def main():
