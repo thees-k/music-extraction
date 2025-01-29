@@ -23,13 +23,13 @@ try:
     print(f"Directory '{target_directory}' created.")
 except FileExistsError:
     print(f"Directory '{target_directory}' already exists.")
-    exit(1)
+    exit(0)
 except PermissionError:
     print(f"Permission denied: Unable to create '{target_directory}'.")
-    exit(1)
+    exit(0)
 except Exception as e:
     print(f"An error occurred: {e}")
-    exit(1)
+    exit(0)
 
 wav_file = audio_tools.create_analysable_audio(str(target_directory), audio_file)
 
@@ -47,14 +47,14 @@ wav_file.unlink()
 #
 #  Inside "target_directory" execute:
 #
-#  find . -maxdepth 1 -type f -iname \*.wav -print0 | xargs -0 -n 1 -P $(nproc) music_extraction.sh -a -s
+#  find . -maxdepth 1 -type f -iname "*.wav" -print0 | xargs -0 -n 1 -P $(nproc) -- music_extraction.sh -a -s
 #  merge_speech_files.sh result.speech
 #
 
 message = f"""
-Now go into folder "{str(target_directory)}" and execute:
+-> Now go into folder "{str(target_directory)}" and execute:
 
-find . -maxdepth 1 -type f -iname \\*.wav -print0 | xargs -0 -n 1 -P $(nproc) music_extraction.sh -a -s
+find . -maxdepth 1 -type f -iname "*.wav" -print0 | xargs -0 -n 1 -P $(nproc) -- music_extraction.sh -a -s
 merge_speech_files.sh "../{audio_file.with_suffix('.speech').name}"
 """
 print(message)
