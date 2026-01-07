@@ -13,8 +13,6 @@ def find(lines: list, total_length: float):
         first_word, speech = fetch_first_word_and_speech(line)
 
         if not speech:
-            if first_word.isdigit():
-                speech_begin = int(first_word)
             break
 
         speech_begin = int(first_word)

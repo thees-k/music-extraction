@@ -225,3 +225,12 @@ class TestMusicSegmentsFinder(TestCase):
             MusicSegment(60, "at 60", 120, "...")
         ]
         self.assertEqual(expected_segments, find(lines, total_length))
+
+    def test_no_speech_at_all(self):
+        lines = ["20",
+                 "end"]
+        total_length = 120
+        expected_segments = [
+            MusicSegment(0, "...", 120, "...")
+        ]
+        self.assertEqual(expected_segments, find(lines, total_length))

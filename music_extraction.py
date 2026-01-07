@@ -11,6 +11,7 @@ from seconds_formatter import seconds_to_min_sec
 from music_segments_finder import MusicSegment
 import re
 from audio_tools import mp3_gain
+from music_speech_segments_finder import find as find_music_speech_segments
 
 """
 Extracts music parts from an audio file (e.g. a radio recording)
@@ -57,7 +58,7 @@ def combine_segments(segments, segments_to_keep):
     return combined_segments
 
 
-def split_audio(audio_path, segments, less_silence_beginning, less_silence_end):
+def split_audio(audio_path, segments, less_silence_beginning, less_silence_end, concert_mode):
     file_extension = os.path.splitext(audio_path)[1]
     for no, segment in enumerate(segments, start=1):
         start, end = segment.begin_seconds, segment.end_seconds
@@ -69,7 +70,8 @@ def split_audio(audio_path, segments, less_silence_beginning, less_silence_end):
                                      SpeechFinder.SEGMENT_LENGTH_SEC + 5.0,
                                      less_silence_beginning = less_silence_beginning,
                                      less_silence_end = less_silence_end,
-                                     with_backup = True)
+                                     with_backup = True,
+                                     keep_speech_at_end=concert_mode)
         audio_trimmer.trim()
         print(f"Exported {str(output_path)} from ~{seconds_to_min_sec(start)} to ~{seconds_to_min_sec(end)} "
               f"({seconds_to_min_sec(audio_trimmer.trimmed_length)})")
@@ -111,6 +113,9 @@ def init_argument_parser() -> Namespace:
     # Another option without argument (a flag!):
     parser.add_argument('-s', '--silent', action='store_true',
                         help='If set, there will be not output on console during analyzing phase')
+
+    parser.add_argument('-c', '--concert', action='store_true',
+                        help='If set, the extracted parts contain music and all the speech that follows it')
 
     parser.add_argument('-b', '--less_silence_beginning', type=float,
                         default=DEFAULT_LESS_SILENCE_SECONDS,
@@ -159,7 +164,10 @@ def main():
     lines, total_length = SpeechFinder(audio_path, args.silent).find_segments()
 
     if not args.analyse:
-        segments = find_music_segments(lines, total_length)
+        if args.concert:
+            segments = find_music_speech_segments(lines, total_length)
+        else:
+            segments = find_music_segments(lines, total_length)
         while True:
             print_music_segments(segments)
             combined_segments = get_user_combined_segments(segments)
@@ -168,7 +176,7 @@ def main():
                 break
         global extraction_name
         extraction_name = get_user_input_extraction_name()
-        split_audio(audio_path, combined_segments, less_silence_beginning, less_silence_end)
+        split_audio(audio_path, combined_segments, less_silence_beginning, less_silence_end, args.concert)
 
 
 if __name__ == "__main__":

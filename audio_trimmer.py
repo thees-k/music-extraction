@@ -49,12 +49,13 @@ def _backup(audio_path):
 class AudioTrimmer:
 
     def __init__(self, audio_path: Path, to_be_analysed_segment_length: float,
-                 less_silence_beginning=0.2, less_silence_end=0.2, with_backup = False):
+                 less_silence_beginning=0.2, less_silence_end=0.2, with_backup = False, keep_speech_at_end = False):
         self._audio_path = audio_path
         self._to_be_analysed_segment_length = to_be_analysed_segment_length
         self._less_silence_beginning = less_silence_beginning
         self._less_silence_end = less_silence_end
         self._with_backup = with_backup
+        self._keep_speech_at_end = keep_speech_at_end
         self._trimmed_length = 0.0
         self._audio_path_backup = None
 
@@ -102,11 +103,19 @@ class AudioTrimmer:
         try:
             partial_audio = split_audio(tmp_wav_path, total_duration - self._to_be_analysed_segment_length, total_duration,
                                         f"tmp_end", tmp_wav_path.suffix)
-            begin_of_speech = _get_begin_of_speech(partial_audio)
-            if begin_of_speech:
-                return total_duration - (self._to_be_analysed_segment_length - begin_of_speech) - self._less_silence_end
+
+            if self._keep_speech_at_end:
+                end_of_speech = _get_end_of_speech(partial_audio)
+                if end_of_speech:
+                    return total_duration - (self._to_be_analysed_segment_length - end_of_speech) + self._less_silence_end
+                else:
+                    return total_duration
             else:
-                return total_duration
+                begin_of_speech = _get_begin_of_speech(partial_audio)
+                if begin_of_speech:
+                    return total_duration - (self._to_be_analysed_segment_length - begin_of_speech) - self._less_silence_end
+                else:
+                    return total_duration
         finally:
             if partial_audio and partial_audio.exists():
                 partial_audio.unlink()
