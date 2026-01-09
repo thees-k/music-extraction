@@ -7,13 +7,30 @@ from audio_tools import get_total_length_of_audio, split_audio, create_analysabl
 def _get_begin_of_speech(audio_path):
     speech_timestamps = _get_speech_timestamps(audio_path)
     if speech_timestamps:
-        return speech_timestamps[0]['start'] / 16000
+        begin_of_speech = speech_timestamps[0]['start'] / 16000
+    else:
+        return -1
+
+    total_length = get_total_length_of_audio(audio_path)
+    if begin_of_speech < 0 or begin_of_speech > total_length:
+        raise RuntimeError(f'begin_of_speech ({begin_of_speech}) is not in the range from 0 to {total_length}')
+    else:
+        return begin_of_speech
 
 
 def _get_end_of_speech(audio_path):
     speech_timestamps = _get_speech_timestamps(audio_path)
     if speech_timestamps:
-        return speech_timestamps[-1]['end'] / 16000
+        end_of_speech = speech_timestamps[-1]['end'] / 16000
+    else:
+        return -1
+
+    total_length = get_total_length_of_audio(audio_path)
+    if end_of_speech < 0 or end_of_speech > total_length:
+        raise RuntimeError(f'end_of_speech ({end_of_speech}) is not in the range from 0 to {total_length}')
+    else:
+        return end_of_speech
+
 
 def _get_speech_timestamps(audio_path, threshold=0.5, min_speech_duration_ms=250):
     torch.set_num_threads(1)
@@ -49,7 +66,7 @@ def _backup(audio_path):
 class AudioTrimmer:
 
     def __init__(self, audio_path: Path, to_be_analysed_segment_length: float,
-                 less_silence_beginning=0.2, less_silence_end=0.2, with_backup = False, keep_speech_at_end = False):
+                 less_silence_beginning=0.3, less_silence_end=0.3, with_backup = False, keep_speech_at_end = False):
         self._audio_path = audio_path
         self._to_be_analysed_segment_length = to_be_analysed_segment_length
         self._less_silence_beginning = less_silence_beginning
@@ -89,10 +106,9 @@ class AudioTrimmer:
             partial_audio = split_audio(tmp_wav_path, 0, self._to_be_analysed_segment_length,
                                         f"tmp_begin", tmp_wav_path.suffix)
             end_of_speech = _get_end_of_speech(partial_audio)
-            if end_of_speech:
-                return end_of_speech + self._less_silence_beginning
-            else:
-                return 0.0
+            if end_of_speech == -1:
+                end_of_speech = 0
+            return min(end_of_speech + self._less_silence_beginning, self._to_be_analysed_segment_length)
         finally:
             if partial_audio and partial_audio.exists():
                 partial_audio.unlink()
@@ -106,16 +122,14 @@ class AudioTrimmer:
 
             if self._keep_speech_at_end:
                 end_of_speech = _get_end_of_speech(partial_audio)
-                if end_of_speech:
-                    return total_duration - (self._to_be_analysed_segment_length - end_of_speech) + self._less_silence_end
-                else:
-                    return total_duration
+                if end_of_speech == -1:
+                    end_of_speech = get_total_length_of_audio(partial_audio)
+                return min(total_duration, total_duration - self._to_be_analysed_segment_length + end_of_speech + self._less_silence_end)
             else:
                 begin_of_speech = _get_begin_of_speech(partial_audio)
-                if begin_of_speech:
-                    return total_duration - (self._to_be_analysed_segment_length - begin_of_speech) - self._less_silence_end
-                else:
-                    return total_duration
+                if begin_of_speech == -1:
+                    begin_of_speech = get_total_length_of_audio(partial_audio)
+                return min(total_duration, total_duration - self._to_be_analysed_segment_length + begin_of_speech - self._less_silence_end)
         finally:
             if partial_audio and partial_audio.exists():
                 partial_audio.unlink()

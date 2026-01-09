@@ -79,13 +79,6 @@ def get_total_length_of_audio(audio_path: Path) -> float:
         raise RuntimeError(f"Retrieving audio duration failed for {audio_path}")
 
 
-# def copy_to_tmp_wav(audio_path: Path):
-#     new_name = "tmp_" + audio_path.stem + ".wav"
-#     command = f'ffmpeg -loglevel error -i "{audio_path}" -ar 16000 "{new_name}"'
-#     subprocess.call(command, shell=True)
-#     return Path(new_name)
-
-
 def split_audio(audio_path, start, end, output_name: str, suffix: str) -> Path:
     output_path = Path(output_name + suffix)
     duration = end - start
