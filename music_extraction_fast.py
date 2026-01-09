@@ -2,6 +2,8 @@
 from pathlib import Path
 import audio_tools
 import sys
+import subprocess
+import shutil
 
 
 if len(sys.argv) == 1:
@@ -39,22 +41,29 @@ extraction_length = 300
 
 start = 0
 while start < total_length:
-    audio_tools.split_audio(wav_file, start, min (start + extraction_length, total_length), f"{str(target_directory)}/{start:06d}", ".wav")
+    audio_tools.split_audio(wav_file, start, min(start + extraction_length *1.0, total_length), f"{str(target_directory)}/{start:06d}", ".wav")
     start += extraction_length
 
 wav_file.unlink()
 
-#
-#  Inside "target_directory" execute:
-#
-#  find . -maxdepth 1 -type f -iname "*.wav" -print0 | xargs -0 -n 1 -P $(nproc) -- music_extraction.sh -a -s
-#  merge_speech_files.sh result.speech
-#
+print("Audio analysis is being performed.")
+try:
+    subprocess.run(
+        'find . -maxdepth 1 -type f -iname "*.wav" -print0 | xargs -0 -n 1 -P $(nproc) -- music_extraction.sh -a -s',
+        shell=True, check=True, cwd=target_directory
+    )
+    output_speech_file = audio_file.with_suffix('.speech').name
+    subprocess.run(
+        f'merge_speech_files.sh "../{output_speech_file}"',
+        shell=True, check=True, cwd=target_directory
+    )
+except subprocess.CalledProcessError as e:
+    print(f"An error occurred while executing commands: {e}")
+    exit(1)
 
-message = f"""
--> Now go into folder "{str(target_directory)}" and execute:
-
-find . -maxdepth 1 -type f -iname "*.wav" -print0 | xargs -0 -n 1 -P $(nproc) -- music_extraction.sh -a -s
-merge_speech_files.sh "../{audio_file.with_suffix('.speech').name}"
-"""
-print(message)
+# Delete the target_directory after processing
+try:
+    shutil.rmtree(target_directory)
+    print(f"Deleted temporary directory '{target_directory}'.")
+except Exception as e:
+    print(f"Failed to delete temporary directory '{target_directory}': {e}")
