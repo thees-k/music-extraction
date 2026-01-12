@@ -205,8 +205,8 @@ drwxrwxr-x 13 thees thees 4,0K Okt 29 09:02  ..
 2. **Create a Virtual Environment**
 
    ```bash
-   python3 -m venv venv
-   source venv/bin/activate  # On Windows use `venv\Scripts\activate`
+   python3 -m venv .venv
+   source .venv/bin/activate
    ```
 
 3. **Install Dependencies**
