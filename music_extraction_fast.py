@@ -4,6 +4,7 @@ import audio_tools
 import sys
 import subprocess
 import tempfile
+import os
 
 if len(sys.argv) < 2:
     print("Missing argument: <audio file>")
@@ -34,13 +35,16 @@ with tempfile.TemporaryDirectory() as tmpdir:
     wav_file.unlink()
 
     print("Audio analysis...")
+    venv_python = Path(__file__).parent / '.venv' / 'bin' / 'python3'
+    main_py_path = Path(__file__).parent / '__main__.py'
+    merge_script = Path(__file__).parent / 'merge_speech_files.sh'
     try:
         subprocess.run(
-            'find . -maxdepth 1 -type f -iname "*.wav" -print0 | xargs -0 -n 1 -P $(nproc) -- music_extraction.sh -a -s',
+            f'find . -maxdepth 1 -type f -iname "*.wav" -print0 | xargs -0 -n 1 -P $(nproc) -- "{venv_python}" "{main_py_path}" -a -s',
             shell=True, check=True, cwd=tmpdir
         )
         subprocess.run(
-            f'merge_speech_files.sh "{output_speech_file.resolve()}"',
+            f'"{merge_script}" "{output_speech_file.resolve()}"',
             shell=True, check=True, cwd=tmpdir
         )
     except subprocess.CalledProcessError as e:

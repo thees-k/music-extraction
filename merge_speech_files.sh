@@ -38,17 +38,21 @@ merged_file="${1}"
 
 [ -f "$merged_file" ] && echo "File \"$merged_file\" already exists" && exit 1
 
+shopt -s nullglob
+files=(*.speech)
+[[ ${#files[@]} -eq 0 ]] && echo "No speech files found inside the current directory." && exit 1
+
 TMP_DIR=$(mktemp -d)
+trap "rm --recursive $TMP_DIR" EXIT
+
 TMP_OUTPUT="$TMP_DIR/tmp_output.txt"
 
 echo "20" >> "$TMP_OUTPUT"
 
-for file in *.speech; do
+for file in "${files[@]}"; do
     process_file;
 done
 
 echo "end" >> "$TMP_OUTPUT"
 
 mv "$TMP_OUTPUT" "$merged_file"
-
-rm --recursive "$TMP_DIR"
