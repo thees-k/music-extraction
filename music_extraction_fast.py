@@ -4,7 +4,6 @@ import audio_tools
 import sys
 import subprocess
 import tempfile
-import os
 
 if len(sys.argv) < 2:
     print("Missing argument: <audio file>")
