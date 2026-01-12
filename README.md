@@ -8,6 +8,8 @@ So far it has been tested for multiple audio formats including MP3, FLAC, and AA
 
 ## Description
 
+### music_extraction.py
+
 An audio file is analyzed in 20-second segments with the help of **Vosk Speech Recognition**. Speech is searched for in the individual 20-second segments. Any speech found (transcription) is saved in the analysis (text) file that is created for each audio file (`.speech` extension).
 
 The analysis of a one-hour audio file takes about 2 minutes.
@@ -184,6 +186,22 @@ drwxrwxr-x 13 thees thees 4,0K Okt 29 09:02  ..
 
 **The new audio files are the results of the extraction process.** They are numbered. For each file a file that ends with "_with_speech" exists. That are the extracted files without fine-tuning. They usually contain speech at the beginning and at the end. Sometimes it is necessary to have them and therefore they are not deleted. 
 
+
+### music_extraction_fast.py
+
+This script provides a faster alternative to `music_extraction.py` by splitting the audio file into larger chunks (e.g., 5 minutes) and processing them in parallel using multiple CPU cores.
+
+It uses the same underlying analysis and extraction methods but improves performance significantly on multi-core systems.
+
+Usage:
+
+```bash
+python3 music_extraction_fast.py <audio_file>
+```
+
+The script creates temporary working directories, splits the audio, runs parallel analysis on the chunks, merges the results, and finally allows you to select and extract music segments similarly to `music_extraction.py`.
+
+Note that `music_extraction_fast.py` just creates the `.speech` file. To do the final extraction of the music segments you must use `music_extraction.py` afterwards. - After the `.speech` file was created, just call `python3 music_extraction.py <audio_file>`.
 
 ## Installation
 
